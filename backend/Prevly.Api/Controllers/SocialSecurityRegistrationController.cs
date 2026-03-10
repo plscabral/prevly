@@ -4,7 +4,7 @@ namespace Prevly.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class SocialSecurityRegistrationController : ControllerBase
+public class SocialSecurityRegistrationController : AuthorizeController
 {
     
 }

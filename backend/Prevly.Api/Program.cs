@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
+using Prevly.Application.Services;
 using Prevly.Domain.Interfaces;
 using Prevly.Infrastructure;
 using Provly.Shared.Security;
@@ -62,6 +63,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<IPersonRepository, PersonRepository>();
 builder.Services.AddScoped<ISocialSecurityRegistrationRepository, SocialSecurityRegistrationRepository>();
+builder.Services.AddScoped<IPersonService, PersonService>();
 
 var app = builder.Build();
 
@@ -74,8 +76,8 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseAuthorization();
 app.UseAuthentication();
+app.UseAuthorization();
 
 
 app.MapControllers();

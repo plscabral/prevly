@@ -13,6 +13,11 @@ public class MongoRepository<T>(IMongoDatabase database, string? collectionName)
         return await _collection.Find(x => x.Id == id).FirstOrDefaultAsync();
     }
 
+    public async Task<T?> GetOneAsync(FilterDefinition<T> filter)
+    {
+        return await _collection.Find(filter).FirstOrDefaultAsync();
+    }
+
     public async Task<PagedResult<T>> GetPaginatedAsync(FilterDefinition<T> filter, PaginationParameters paginationParameters)
     {
         long totalRecords = await _collection.CountDocumentsAsync(filter);
