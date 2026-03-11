@@ -17,9 +17,5 @@
         <ProjectReference Include="..\Prevly.Domain\Prevly.Domain.csproj" />
         <ProjectReference Include="..\Prevly.Infrastructure\Prevly.Infrastructure.csproj" />
     </ItemGroup>
-    
-    <ItemGroup>
-      <Folder Include="DTOs\" />
-    </ItemGroup>
 
 </Project>

@@ -1,6 +1,6 @@
-namespace Prevly.Application.Services.Models;
+namespace Prevly.Application.Services.DTOs.Person;
 
-public sealed class UpdatePersonRequest
+public class UpdatePersonDto
 {
     public required string Name { get; init; }
     public required string Cpf { get; init; }

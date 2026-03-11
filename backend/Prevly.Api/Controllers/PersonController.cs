@@ -1,7 +1,7 @@
-using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Mvc;
 using Prevly.Application.Services;
-using Prevly.Application.Services.Models;
+using Prevly.Application.Services.DTOs;
+using Prevly.Application.Services.DTOs.Person;
 using Prevly.Domain.Entities;
 using Provly.Shared.Pagination;
 
@@ -9,105 +9,107 @@ namespace Prevly.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-public class PersonController(IPersonService personService) : AuthorizeController
+public class PersonController(
+    ILogger<PersonController> logger,
+    IPersonService personService
+    ) : AuthorizeController
 {
     [HttpGet]
     [ProducesResponseType(StatusCodes.Status200OK)]
-    public async Task<ActionResult<PagedResult<Person>>> GetPaginated([FromQuery] PersonPaginationParameters paginationParameters)
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<PagedResult<Person>>> GetPaginated([FromQuery] FilterPersonDto dto)
     {
-        var result = await personService.GetPaginatedAsync(new Prevly.Application.Services.Models.PersonPaginationParameters
+        try
         {
-            PageNumber = paginationParameters.PageNumber,
-            PageSize = paginationParameters.PageSize,
-            Name = paginationParameters.Name,
-            Cpf = paginationParameters.Cpf
-        });
-
-        return Ok(result);
+            var result = await personService.GetPaginatedAsync(dto);
+            
+            return Ok(result);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, e.Message);
+            return StatusCode(400, e.Message);
+        }
     }
 
     [HttpGet("{id}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<Person>> GetById([FromRoute] string id)
     {
-        var person = await personService.GetByIdAsync(id);
+        try
+        {
+            var person = await personService.GetByIdAsync(id);
 
-        return person is null ? NotFound() : Ok(person);
+            return person is null ? NotFound() : Ok(person);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, e.Message);
+            return StatusCode(400, e.Message);
+        }
     }
 
     [HttpPost]
+    [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status201Created)]
-    public async Task<ActionResult<Person>> Create([FromBody] CreatePersonApiRequest request)
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<Person>> Create([FromBody] CreatePersonDto dto)
     {
-        var person = await personService.CreateAsync(new CreatePersonRequest
+        try
         {
-            Name = request.Name.Trim(),
-            Cpf = request.Cpf.Trim(),
-            Age = request.Age,
-            BirthDate = request.BirthDate
-        });
+            var person = await personService.CreateAsync(dto);
 
-        return CreatedAtAction(nameof(GetById), new { id = person.Id }, person);
+            return CreatedAtAction(nameof(GetById), new { id = person.Id }, person);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, e.Message);
+            return StatusCode(400, e.Message);
+        }
     }
 
     [HttpPut("{id}")]
     [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<ActionResult<Person>> Update([FromRoute] string id, [FromBody] UpdatePersonApiRequest request)
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<Person>> Update([FromRoute] string id, [FromBody] UpdatePersonDto dto)
     {
-        var person = await personService.UpdateAsync(id, new UpdatePersonRequest
+        try
         {
-            Name = request.Name.Trim(),
-            Cpf = request.Cpf.Trim(),
-            Age = request.Age,
-            BirthDate = request.BirthDate
-        });
+            var person = await personService.UpdateAsync(id, dto);
 
-        return person is null ? NotFound() : Ok(person);
+            return person is null ? NotFound() : Ok(person);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, e.Message);
+            return StatusCode(400, e.Message);
+        }
     }
 
     [HttpDelete("{id}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<IActionResult> Delete([FromRoute] string id)
     {
-        var deleted = await personService.DeleteAsync(id);
+        try
+        {
+            var deleted = await personService.DeleteAsync(id);
 
-        return deleted ? NoContent() : NotFound();
+            return deleted ? NoContent() : NotFound();
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, e.Message);
+            return StatusCode(400, e.Message);
+        }
     }
-}
-
-public sealed class CreatePersonApiRequest
-{
-    [Required]
-    public string Name { get; set; } = string.Empty;
-
-    [Required]
-    public string Cpf { get; set; } = string.Empty;
-
-    [Range(0, 150)]
-    public int? Age { get; set; }
-
-    public DateTime? BirthDate { get; set; }
-}
-
-public sealed class UpdatePersonApiRequest
-{
-    [Required]
-    public string Name { get; set; } = string.Empty;
-
-    [Required]
-    public string Cpf { get; set; } = string.Empty;
-
-    [Range(0, 150)]
-    public int? Age { get; set; }
-
-    public DateTime? BirthDate { get; set; }
-}
-
-public sealed class PersonPaginationParameters : PaginationParameters
-{
-    public string? Name { get; set; }
-    public string? Cpf { get; set; }
 }

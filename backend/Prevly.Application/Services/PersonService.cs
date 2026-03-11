@@ -1,7 +1,8 @@
 using System.Text.RegularExpressions;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Prevly.Application.Services.Models;
+using Prevly.Application.Services.DTOs;
+using Prevly.Application.Services.DTOs.Person;
 using Prevly.Domain.Entities;
 using Prevly.Domain.Interfaces;
 using Provly.Shared.Pagination;
@@ -10,26 +11,20 @@ namespace Prevly.Application.Services;
 
 public sealed class PersonService(IPersonRepository personRepository) : IPersonService
 {
-    public Task<PagedResult<Person>> GetPaginatedAsync(PersonPaginationParameters parameters)
+    public Task<PagedResult<Person>> GetPaginatedAsync(FilterPersonDto parameters)
     {
         var filters = new List<FilterDefinition<Person>>();
 
         if (!string.IsNullOrWhiteSpace(parameters.Name))
         {
             var namePattern = Regex.Escape(parameters.Name.Trim());
-            filters.Add(
-                Builders<Person>.Filter.Regex(
-                    person => person.Name,
-                    new BsonRegularExpression(namePattern, "i")));
+            filters.Add(Builders<Person>.Filter.Regex(person => person.Name, new BsonRegularExpression(namePattern, "i")));
         }
 
         if (!string.IsNullOrWhiteSpace(parameters.Cpf))
         {
             var cpfPattern = Regex.Escape(parameters.Cpf.Trim());
-            filters.Add(
-                Builders<Person>.Filter.Regex(
-                    person => person.Cpf,
-                    new BsonRegularExpression(cpfPattern, "i")));
+            filters.Add(Builders<Person>.Filter.Regex(person => person.Cpf, new BsonRegularExpression(cpfPattern, "i")));
         }
 
         var filter = filters.Count > 0
@@ -41,7 +36,7 @@ public sealed class PersonService(IPersonRepository personRepository) : IPersonS
 
     public Task<Person?> GetByIdAsync(string id) => personRepository.GetByIdAsync(id);
 
-    public async Task<Person> CreateAsync(CreatePersonRequest request)
+    public async Task<Person> CreateAsync(CreatePersonDto request)
     {
         var person = new Person
         {
@@ -57,16 +52,16 @@ public sealed class PersonService(IPersonRepository personRepository) : IPersonS
         return person;
     }
 
-    public async Task<Person?> UpdateAsync(string id, UpdatePersonRequest request)
+    public async Task<Person?> UpdateAsync(string id, UpdatePersonDto dto)
     {
         var existingPerson = await personRepository.GetByIdAsync(id);
         if (existingPerson is null)
             return null;
 
-        existingPerson.Name = request.Name.Trim();
-        existingPerson.Cpf = request.Cpf.Trim();
-        existingPerson.Age = request.Age;
-        existingPerson.BirthDate = request.BirthDate;
+        existingPerson.Name = dto.Name.Trim();
+        existingPerson.Cpf = dto.Cpf.Trim();
+        existingPerson.Age = dto.Age;
+        existingPerson.BirthDate = dto.BirthDate;
 
         await personRepository.UpdateAsync(id, existingPerson);
         return existingPerson;
