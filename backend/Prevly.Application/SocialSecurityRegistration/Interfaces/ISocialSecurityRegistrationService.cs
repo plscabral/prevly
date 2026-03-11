@@ -10,4 +10,14 @@ public interface ISocialSecurityRegistrationService
         string contentType,
         string? personId
     );
+    Task<ProcessOwnershipChecksResultDto> ProcessPendingOwnershipChecksAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<PendingContributionNitDto>> GetPendingContributionCalculationAsync();
+    Task<ContributionDetailsImportResultDto> ImportContributionDetailsFromPdfAsync(
+        Stream pdfStream,
+        string fileName,
+        string contentType,
+        CancellationToken cancellationToken = default
+    );
+    Task BindPersonToNitAsync(BindPersonToNitDto dto);
+    Task<IReadOnlyCollection<NitReportItemDto>> CreateReportAsync(CreateNitReportRequestDto dto);
 }

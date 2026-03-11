@@ -1,44 +1,43 @@
 using System.Text.RegularExpressions;
 using MongoDB.Bson;
 using MongoDB.Driver;
-using Prevly.Application.Services.DTOs;
+using Prevly.Application.Person.Interfaces;
 using Prevly.Application.Services.DTOs.Person;
-using Prevly.Domain.Entities;
 using Prevly.Domain.Interfaces;
 using Provly.Shared.Pagination;
 
-namespace Prevly.Application.Services;
+namespace Prevly.Application.Person.Services;
 
 public sealed class PersonService(IPersonRepository personRepository) : IPersonService
 {
-    public Task<PagedResult<Person>> GetPaginatedAsync(FilterPersonDto parameters)
+    public Task<PagedResult<Domain.Entities.Person>> GetPaginatedAsync(FilterPersonDto parameters)
     {
-        var filters = new List<FilterDefinition<Person>>();
+        var filters = new List<FilterDefinition<Domain.Entities.Person>>();
 
         if (!string.IsNullOrWhiteSpace(parameters.Name))
         {
             var namePattern = Regex.Escape(parameters.Name.Trim());
-            filters.Add(Builders<Person>.Filter.Regex(person => person.Name, new BsonRegularExpression(namePattern, "i")));
+            filters.Add(Builders<Domain.Entities.Person>.Filter.Regex(person => person.Name, new BsonRegularExpression(namePattern, "i")));
         }
 
         if (!string.IsNullOrWhiteSpace(parameters.Cpf))
         {
             var cpfPattern = Regex.Escape(parameters.Cpf.Trim());
-            filters.Add(Builders<Person>.Filter.Regex(person => person.Cpf, new BsonRegularExpression(cpfPattern, "i")));
+            filters.Add(Builders<Domain.Entities.Person>.Filter.Regex(person => person.Cpf, new BsonRegularExpression(cpfPattern, "i")));
         }
 
         var filter = filters.Count > 0
-            ? Builders<Person>.Filter.And(filters)
-            : Builders<Person>.Filter.Empty;
+            ? Builders<Domain.Entities.Person>.Filter.And(filters)
+            : Builders<Domain.Entities.Person>.Filter.Empty;
 
         return personRepository.GetPaginatedAsync(filter, parameters);
     }
 
-    public Task<Person?> GetByIdAsync(string id) => personRepository.GetByIdAsync(id);
+    public Task<Domain.Entities.Person?> GetByIdAsync(string id) => personRepository.GetByIdAsync(id);
 
-    public async Task<Person> CreateAsync(CreatePersonDto request)
+    public async Task<Domain.Entities.Person> CreateAsync(CreatePersonDto request)
     {
-        var person = new Person
+        var person = new Domain.Entities.Person
         {
             Id = Guid.NewGuid().ToString("N"),
             Name = request.Name.Trim(),
@@ -52,7 +51,7 @@ public sealed class PersonService(IPersonRepository personRepository) : IPersonS
         return person;
     }
 
-    public async Task<Person?> UpdateAsync(string id, UpdatePersonDto dto)
+    public async Task<Domain.Entities.Person?> UpdateAsync(string id, UpdatePersonDto dto)
     {
         var existingPerson = await personRepository.GetByIdAsync(id);
         if (existingPerson is null)

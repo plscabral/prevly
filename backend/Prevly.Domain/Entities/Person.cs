@@ -8,6 +8,9 @@ public class Person : IEntity
     public string? Name { get; set; }
     public string? Cpf { get; set; }
     public int? Age { get; set; }
+    
+    public string? GovPassword { get; set; }
+    public string? SocialSecurityRegistrationId { get; set; }
     public DateTime? BirthDate { get; set; }
     public DateTime CreatedAt { get; set; }
 }
