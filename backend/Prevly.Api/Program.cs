@@ -5,9 +5,7 @@ using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
 using Prevly.Application.Person.Interfaces;
 using Prevly.Application.Person.Services;
-using Prevly.Application.Services;
 using Prevly.Application.SocialSecurityRegistration.Integrations.Interfaces;
-using Prevly.Application.SocialSecurityRegistration.Integrations.Settings;
 using Prevly.Application.SocialSecurityRegistration.Integrations.Services;
 using Prevly.Application.SocialSecurityRegistration.Interfaces;
 using Prevly.Application.SocialSecurityRegistration.Services;
@@ -73,17 +71,8 @@ builder.Services.AddScoped<IPersonRepository, PersonRepository>();
 builder.Services.AddScoped<ISocialSecurityRegistrationRepository, SocialSecurityRegistrationRepository>();
 builder.Services.AddScoped<IPersonService, PersonService>();
 builder.Services.AddScoped<ISocialSecurityRegistrationService, SocialSecurityRegistrationService>();
-builder.Services.Configure<NitOwnershipCheckerSettings>(builder.Configuration.GetSection("NitOwnershipChecker"));
-builder.Services.AddScoped<NitOwnershipCheckerStub>();
 builder.Services.AddScoped<NitOwnershipCheckerPlaywright>();
-builder.Services.AddScoped<INitOwnershipChecker>(sp =>
-{
-    var settings = sp.GetRequiredService<IOptions<NitOwnershipCheckerSettings>>().Value;
-
-    return settings.Provider.Equals("Stub", StringComparison.OrdinalIgnoreCase)
-        ? sp.GetRequiredService<NitOwnershipCheckerStub>()
-        : sp.GetRequiredService<NitOwnershipCheckerPlaywright>();
-});
+builder.Services.AddScoped<INitOwnershipChecker>(sp => sp.GetRequiredService<NitOwnershipCheckerPlaywright>());
 builder.Services.AddHostedService<NitOwnershipCheckWorker>();
 
 var app = builder.Build();

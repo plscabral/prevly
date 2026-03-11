@@ -202,6 +202,8 @@ public class SocialSecurityRegistrationController(
         }
     }
 
+    #region Private methods
+
     private static async Task<IReadOnlyCollection<ContributionPdfDocument>> ExtractPdfDocumentsAsync(
         IFormFile file,
         CancellationToken cancellationToken
@@ -218,7 +220,10 @@ public class SocialSecurityRegistrationController(
         };
     }
 
-    private static async Task<ContributionPdfDocument> ReadPdfAsync(IFormFile file, CancellationToken cancellationToken)
+    private static async Task<ContributionPdfDocument> ReadPdfAsync(
+        IFormFile file, 
+        CancellationToken cancellationToken
+    )
     {
         await using var inputStream = file.OpenReadStream();
         await using var outputStream = new MemoryStream();
@@ -285,4 +290,6 @@ public class SocialSecurityRegistrationController(
     }
 
     private sealed record ContributionPdfDocument(string FileName, byte[] Content);
+
+    #endregion
 }
