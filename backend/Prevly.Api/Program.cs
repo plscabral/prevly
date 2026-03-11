@@ -4,6 +4,8 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
 using Prevly.Application.Services;
+using Prevly.Application.SocialSecurityRegistration.Interfaces;
+using Prevly.Application.SocialSecurityRegistration.Services;
 using Prevly.Domain.Interfaces;
 using Prevly.Infrastructure;
 using Provly.Shared.Security;
@@ -64,6 +66,7 @@ builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<IPersonRepository, PersonRepository>();
 builder.Services.AddScoped<ISocialSecurityRegistrationRepository, SocialSecurityRegistrationRepository>();
 builder.Services.AddScoped<IPersonService, PersonService>();
+builder.Services.AddScoped<ISocialSecurityRegistrationService, SocialSecurityRegistrationService>();
 
 var app = builder.Build();
 
