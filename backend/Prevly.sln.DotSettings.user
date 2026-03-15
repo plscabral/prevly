@@ -1,0 +1,11 @@
+﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=44766d64_002D9620_002D4424_002D8c7a_002Dd254857cf699/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="Should_Post_Confirmar_Opcoes_Calculo" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;
+  &lt;TestAncestor&gt;
+    &lt;TestId&gt;NUnit3x::683D1D6C-4185-448A-B64A-C0F3339218BE::net8.0::Prevly.Test.NitOwnershipCheckerPluginTest.Should_Post_Confirmar_Opcoes_Calculo&lt;/TestId&gt;
+  &lt;/TestAncestor&gt;
+&lt;/SessionState&gt;</s:String>
+	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=53771080_002D8275_002D4109_002Da679_002D26a8adfe88ab/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" Name="Should_Open_Site" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;
+  &lt;TestAncestor&gt;
+    &lt;TestId&gt;NUnit3x::683D1D6C-4185-448A-B64A-C0F3339218BE::net8.0::Prevly.Test.NitOwnershipCheckerPluginTest.Should_Open_Site&lt;/TestId&gt;
+  &lt;/TestAncestor&gt;
+&lt;/SessionState&gt;</s:String></wpf:ResourceDictionary>

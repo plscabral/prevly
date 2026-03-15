@@ -71,8 +71,8 @@ builder.Services.AddScoped<IPersonRepository, PersonRepository>();
 builder.Services.AddScoped<ISocialSecurityRegistrationRepository, SocialSecurityRegistrationRepository>();
 builder.Services.AddScoped<IPersonService, PersonService>();
 builder.Services.AddScoped<ISocialSecurityRegistrationService, SocialSecurityRegistrationService>();
-builder.Services.AddScoped<NitOwnershipCheckerPlaywright>();
-builder.Services.AddScoped<INitOwnershipChecker>(sp => sp.GetRequiredService<NitOwnershipCheckerPlaywright>());
+builder.Services.AddScoped<NitOwnershipCheckerHttpClient>();
+builder.Services.AddScoped<INitOwnershipChecker>(sp => sp.GetRequiredService<NitOwnershipCheckerHttpClient>());
 builder.Services.AddHostedService<NitOwnershipCheckWorker>();
 
 var app = builder.Build();
