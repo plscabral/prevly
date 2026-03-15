@@ -42,6 +42,8 @@ public sealed class PersonService(IPersonRepository personRepository) : IPersonS
             Id = Guid.NewGuid().ToString("N"),
             Name = request.Name.Trim(),
             Cpf = request.Cpf.Trim(),
+            Phone = request.Phone?.Trim(),
+            WhatsApp = request.WhatsApp?.Trim(),
             Age = request.Age,
             BirthDate = request.BirthDate,
             CreatedAt = DateTime.UtcNow
@@ -59,6 +61,8 @@ public sealed class PersonService(IPersonRepository personRepository) : IPersonS
 
         existingPerson.Name = dto.Name.Trim();
         existingPerson.Cpf = dto.Cpf.Trim();
+        existingPerson.Phone = dto.Phone?.Trim();
+        existingPerson.WhatsApp = dto.WhatsApp?.Trim();
         existingPerson.Age = dto.Age;
         existingPerson.BirthDate = dto.BirthDate;
 

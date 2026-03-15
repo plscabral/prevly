@@ -10,6 +10,10 @@ public interface ISocialSecurityRegistrationService
         string contentType,
         string? personId
     );
+    Task<ImportSocialSecurityRegistrationsResultDto> ImportFromNumbersAsync(
+        IReadOnlyCollection<string> numbers,
+        string? personId
+    );
     Task<ProcessOwnershipChecksResultDto> ProcessPendingOwnershipChecksAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyCollection<PendingContributionNitDto>> GetPendingContributionCalculationAsync();
     Task<ContributionDetailsImportResultDto> ImportContributionDetailsFromPdfAsync(

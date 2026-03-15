@@ -32,47 +32,24 @@ public sealed class SocialSecurityRegistrationService(
 
         var text = await ExtractTextAsync(pdfStream);
         var candidates = ExtractCandidates(text);
-        var validNits = candidates.Where(IsValidNit).Distinct().ToList();
+        return await SaveUniqueValidNitsAsync(candidates, personId);
+    }
 
-        var inserted = 0;
-        var duplicates = 0;
+    public async Task<ImportSocialSecurityRegistrationsResultDto> ImportFromNumbersAsync(
+        IReadOnlyCollection<string> numbers,
+        string? personId
+    )
+    {
+        if (numbers.Count == 0)
+            throw new ArgumentException("Informe ao menos um NIT.");
 
-        foreach (var number in validNits)
-        {
-            var filter = Builders<SocialSecurityRegistrationEntity>.Filter.Eq(x => x.Number, number);
-            var existing = await socialSecurityRegistrationRepository.GetOneAsync(filter);
+        var candidates = numbers
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => new string(x.Where(char.IsDigit).ToArray()))
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .ToList();
 
-            if (existing is not null)
-            {
-                duplicates++;
-                continue;
-            }
-
-            var registration = new SocialSecurityRegistrationEntity
-            {
-                Id = Guid.NewGuid().ToString("N"),
-                Number = number,
-                PersonId = personId,
-                CreatedAt = DateTime.UtcNow,
-                FirstContributionDate = DateTime.MinValue,
-                LastContributionDate = DateTime.MinValue,
-                ContributionYears = 0,
-                Status = SocialSecurityRegistrationStatus.PendingOwnershipCheck,
-                LastProcessingError = null,
-                OwnershipCheckedAt = null
-            };
-
-            await socialSecurityRegistrationRepository.CreateAsync(registration);
-            inserted++;
-        }
-
-        return new ImportSocialSecurityRegistrationsResultDto(
-            TotalCandidates: candidates.Count,
-            TotalValidNits: validNits.Count,
-            Inserted: inserted,
-            Duplicates: duplicates,
-            Numbers: validNits
-        );
+        return await SaveUniqueValidNitsAsync(candidates, personId);
     }
 
     public async Task<ProcessOwnershipChecksResultDto> ProcessPendingOwnershipChecksAsync(
@@ -300,6 +277,54 @@ public sealed class SocialSecurityRegistrationService(
     }
 
     #region Private methods
+
+    private async Task<ImportSocialSecurityRegistrationsResultDto> SaveUniqueValidNitsAsync(
+        IReadOnlyCollection<string> candidates,
+        string? personId
+    )
+    {
+        var validNits = candidates.Where(IsValidNit).Distinct().ToList();
+
+        var inserted = 0;
+        var duplicates = 0;
+
+        foreach (var number in validNits)
+        {
+            var filter = Builders<SocialSecurityRegistrationEntity>.Filter.Eq(x => x.Number, number);
+            var existing = await socialSecurityRegistrationRepository.GetOneAsync(filter);
+
+            if (existing is not null)
+            {
+                duplicates++;
+                continue;
+            }
+
+            var registration = new SocialSecurityRegistrationEntity
+            {
+                Id = Guid.NewGuid().ToString("N"),
+                Number = number,
+                PersonId = personId,
+                CreatedAt = DateTime.UtcNow,
+                FirstContributionDate = DateTime.MinValue,
+                LastContributionDate = DateTime.MinValue,
+                ContributionYears = 0,
+                Status = SocialSecurityRegistrationStatus.PendingOwnershipCheck,
+                LastProcessingError = null,
+                OwnershipCheckedAt = null
+            };
+
+            await socialSecurityRegistrationRepository.CreateAsync(registration);
+            inserted++;
+        }
+
+        return new ImportSocialSecurityRegistrationsResultDto(
+            TotalCandidates: candidates.Count,
+            TotalValidNits: validNits.Count,
+            Inserted: inserted,
+            Duplicates: duplicates,
+            Numbers: validNits
+        );
+    }
 
     private static void ValidatePdfFile(Stream pdfStream, string fileName, string contentType)
     {

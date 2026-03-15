@@ -14,26 +14,26 @@ public class SocialSecurityRegistrationController(
 ) : AuthorizeController
 {
     [HttpPost("import-pdf")]
+    [Consumes("multipart/form-data")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<ImportSocialSecurityRegistrationsResultDto>> ImportPdf(
-        [FromForm] IFormFile? file,
-        [FromForm] string? personId = null
+        [FromForm] ImportPdfRequestDto request
     )
     {
         try
         {
-            if (file is null || file.Length == 0)
+            if (request.File is null || request.File.Length == 0)
                 return BadRequest("O arquivo PDF e obrigatorio.");
 
-            await using var stream = file.OpenReadStream();
+            await using var stream = request.File.OpenReadStream();
 
             var result = await socialSecurityRegistrationService.ImportFromPdfAsync(
                 stream,
-                file.FileName,
-                file.ContentType,
-                personId
+                request.File.FileName,
+                request.File.ContentType,
+                request.PersonId
             );
 
             return Ok(result);
@@ -48,6 +48,54 @@ public class SocialSecurityRegistrationController(
             logger.LogError(e, e.Message);
             return StatusCode(500, "Erro ao importar o PDF.");
         }
+    }
+
+    [HttpPost("import-simple")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<ImportSocialSecurityRegistrationsResultDto>> ImportSimple(
+        [FromBody] ImportSimpleRequestDto request
+    )
+    {
+        try
+        {
+            var numbers = request.Numbers?
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .ToList() ?? [];
+
+            if (!string.IsNullOrWhiteSpace(request.Number))
+                numbers.Add(request.Number);
+
+            if (numbers.Count == 0)
+                return BadRequest("Informe ao menos um NIT.");
+
+            var result = await socialSecurityRegistrationService.ImportFromNumbersAsync(numbers, request.PersonId);
+            return Ok(result);
+        }
+        catch (ArgumentException e)
+        {
+            logger.LogWarning(e, e.Message);
+            return BadRequest(e.Message);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, e.Message);
+            return StatusCode(500, "Erro ao importar NITs.");
+        }
+    }
+
+    public sealed class ImportPdfRequestDto
+    {
+        public IFormFile? File { get; set; }
+        public string? PersonId { get; set; }
+    }
+
+    public sealed class ImportSimpleRequestDto
+    {
+        public string? Number { get; set; }
+        public List<string>? Numbers { get; set; }
+        public string? PersonId { get; set; }
     }
 
     [HttpPost("process-pending-ownership")]
