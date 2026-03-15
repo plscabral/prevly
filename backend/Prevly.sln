@@ -10,6 +10,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Provly.Shared", "Provly.Sha
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Prevly.Application", "Prevly.Application\Prevly.Application.csproj", "{4181EC33-E0B0-4887-B2FF-DF191A3AEAF0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Prevly.Test", "Prevly.Test\Prevly.Test.csproj", "{683D1D6C-4185-448A-B64A-C0F3339218BE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -80,6 +82,18 @@ Global
 		{4181EC33-E0B0-4887-B2FF-DF191A3AEAF0}.Release|x64.Build.0 = Release|Any CPU
 		{4181EC33-E0B0-4887-B2FF-DF191A3AEAF0}.Release|x86.ActiveCfg = Release|Any CPU
 		{4181EC33-E0B0-4887-B2FF-DF191A3AEAF0}.Release|x86.Build.0 = Release|Any CPU
+		{683D1D6C-4185-448A-B64A-C0F3339218BE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{683D1D6C-4185-448A-B64A-C0F3339218BE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{683D1D6C-4185-448A-B64A-C0F3339218BE}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{683D1D6C-4185-448A-B64A-C0F3339218BE}.Debug|x64.Build.0 = Debug|Any CPU
+		{683D1D6C-4185-448A-B64A-C0F3339218BE}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{683D1D6C-4185-448A-B64A-C0F3339218BE}.Debug|x86.Build.0 = Debug|Any CPU
+		{683D1D6C-4185-448A-B64A-C0F3339218BE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{683D1D6C-4185-448A-B64A-C0F3339218BE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{683D1D6C-4185-448A-B64A-C0F3339218BE}.Release|x64.ActiveCfg = Release|Any CPU
+		{683D1D6C-4185-448A-B64A-C0F3339218BE}.Release|x64.Build.0 = Release|Any CPU
+		{683D1D6C-4185-448A-B64A-C0F3339218BE}.Release|x86.ActiveCfg = Release|Any CPU
+		{683D1D6C-4185-448A-B64A-C0F3339218BE}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

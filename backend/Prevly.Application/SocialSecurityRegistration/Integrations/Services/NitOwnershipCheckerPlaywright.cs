@@ -6,18 +6,11 @@ using Prevly.Application.SocialSecurityRegistration.Integrations.Interfaces;
 namespace Prevly.Application.SocialSecurityRegistration.Integrations.Services;
 
 public sealed class NitOwnershipCheckerPlaywright(
-    ILogger<NitOwnershipCheckerPlaywright> logger
+    ILogger<NitOwnershipCheckerPlaywright> logger,
+    NitOwnershipCheckerPlaywrightConfig? config = null
 ) : INitOwnershipChecker
 {
-    private const bool Headless = true;
-    private const int TimeoutMs = 30000;
-    private const string QueryUrl = "https://sal.rfb.gov.br/calculo-contribuicao/contribuintes-1";
-    private const string CategorySelectSelector = "select[name='categoria'], select[formcontrolname='categoria'], select";
-    private const string CategoryValue = "AUTONOMO";
-    private const string NitInputSelector = "input[name='nit'], input[formcontrolname='nit'], input[placeholder*='NIT' i], input[aria-label*='NIT' i]";
-    private const string SubmitButtonSelector = "button:has-text('Consultar'), [type='submit']";
-    private static readonly string[] OwnedIndicators = ["ja cadastrado", "vinculado", "pertence a outra pessoa"];
-    private static readonly string[] NotOwnedIndicators = ["nao localizado", "sem vinculo", "disponivel"];
+    private readonly NitOwnershipCheckerPlaywrightConfig _config = config ?? NitOwnershipCheckerPlaywrightConfig.Default;
 
     public async Task<NitOwnershipCheckResultDto> CheckAsync(string nit, CancellationToken cancellationToken = default)
     {
@@ -27,16 +20,16 @@ public sealed class NitOwnershipCheckerPlaywright(
         using var playwright = await Playwright.CreateAsync();
         await using var browser = await playwright.Chromium.LaunchAsync(new BrowserTypeLaunchOptions
         {
-            Headless = Headless,
+            Headless = _config.Headless,
             Args = ["--disable-dev-shm-usage"]
         });
 
         var context = await browser.NewContextAsync();
         var page = await context.NewPageAsync();
 
-        await page.GotoAsync(QueryUrl, new PageGotoOptions
+        await page.GotoAsync(_config.QueryUrl, new PageGotoOptions
         {
-            Timeout = TimeoutMs,
+            Timeout = _config.TimeoutMs,
             WaitUntil = WaitUntilState.NetworkIdle
         });
 
@@ -46,10 +39,11 @@ public sealed class NitOwnershipCheckerPlaywright(
 
         await page.WaitForTimeoutAsync(1500);
 
-        var content = (await page.ContentAsync()).ToLowerInvariant();
+        var visibleText = await page.EvaluateAsync<string>("() => document.body?.innerText ?? ''");
+        var content = visibleText.ToLowerInvariant();
 
-        var hasOwnedIndicator = ContainsAny(content, OwnedIndicators);
-        var hasNotOwnedIndicator = ContainsAny(content, NotOwnedIndicators);
+        var hasOwnedIndicator = ContainsAny(content, _config.OwnedIndicators);
+        var hasNotOwnedIndicator = ContainsAny(content, _config.NotOwnedIndicators);
 
         if (hasOwnedIndicator && hasNotOwnedIndicator)
             logger.LogWarning("Resultado ambiguo na consulta de titularidade para NIT {Nit}.", nit);
@@ -67,7 +61,7 @@ public sealed class NitOwnershipCheckerPlaywright(
     {
         try
         {
-            var categorySelect = page.Locator(CategorySelectSelector).First;
+            var categorySelect = page.Locator(_config.CategorySelectSelector).First;
             if (await categorySelect.CountAsync() > 0)
             {
                 var options = await categorySelect.Locator("option").AllTextContentsAsync();
@@ -85,7 +79,7 @@ public sealed class NitOwnershipCheckerPlaywright(
 
                 await categorySelect.SelectOptionAsync(new SelectOptionValue
                 {
-                    Value = CategoryValue
+                    Value = _config.CategoryValue
                 });
                 return;
             }
@@ -114,22 +108,22 @@ public sealed class NitOwnershipCheckerPlaywright(
 
     private async Task FillNitAsync(IPage page, string nit)
     {
-        var nitInput = page.Locator(NitInputSelector).First;
+        var nitInput = page.Locator(_config.NitInputSelector).First;
         if (await nitInput.CountAsync() == 0)
             nitInput = page.GetByLabel("NIT", new PageGetByLabelOptions { Exact = false }).First;
 
         if (await nitInput.CountAsync() == 0)
             throw new InvalidOperationException("Nao foi possivel localizar o campo de NIT.");
 
-        await nitInput.FillAsync(nit, new LocatorFillOptions { Timeout = TimeoutMs });
+        await nitInput.FillAsync(nit, new LocatorFillOptions { Timeout = _config.TimeoutMs });
     }
 
     private async Task ClickSubmitAsync(IPage page)
     {
-        var submitButton = page.Locator(SubmitButtonSelector).First;
+        var submitButton = page.Locator(_config.SubmitButtonSelector).First;
         if (await submitButton.CountAsync() > 0)
         {
-            await submitButton.ClickAsync(new LocatorClickOptions { Timeout = TimeoutMs });
+            await submitButton.ClickAsync(new LocatorClickOptions { Timeout = _config.TimeoutMs });
             return;
         }
 
@@ -137,7 +131,7 @@ public sealed class NitOwnershipCheckerPlaywright(
         if (await buttonByText.CountAsync() == 0)
             throw new InvalidOperationException("Nao foi possivel localizar o botao Consultar.");
 
-        await buttonByText.ClickAsync(new LocatorClickOptions { Timeout = TimeoutMs });
+        await buttonByText.ClickAsync(new LocatorClickOptions { Timeout = _config.TimeoutMs });
     }
 
     private static bool ContainsAny(string content, IEnumerable<string> indicators)
@@ -153,4 +147,29 @@ public sealed class NitOwnershipCheckerPlaywright(
 
         return false;
     }
+}
+
+public sealed record NitOwnershipCheckerPlaywrightConfig(
+    bool Headless,
+    int TimeoutMs,
+    string QueryUrl,
+    string CategorySelectSelector,
+    string CategoryValue,
+    string NitInputSelector,
+    string SubmitButtonSelector,
+    IReadOnlyCollection<string> OwnedIndicators,
+    IReadOnlyCollection<string> NotOwnedIndicators
+)
+{
+    public static NitOwnershipCheckerPlaywrightConfig Default { get; } = new(
+        Headless: true,
+        TimeoutMs: 30000,
+        QueryUrl: "https://sal.rfb.gov.br/calculo-contribuicao/contribuintes-1",
+        CategorySelectSelector: "select[name='categoria'], select[formcontrolname='categoria'], select",
+        CategoryValue: "AUTONOMO",
+        NitInputSelector: "input[name='nit'], input[formcontrolname='nit'], input[placeholder*='NIT' i], input[aria-label*='NIT' i]",
+        SubmitButtonSelector: "button:has-text('Consultar'), [type='submit']",
+        OwnedIndicators: ["ja cadastrado", "vinculado", "pertence a outra pessoa"],
+        NotOwnedIndicators: ["nao localizado", "sem vinculo", "disponivel"]
+    );
 }
