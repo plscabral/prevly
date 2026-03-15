@@ -3,6 +3,8 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
+using Newtonsoft.Json.Linq;
 
 namespace Prevly.Test;
 
@@ -43,7 +45,8 @@ public class NitOwnershipCheckerPluginTest
         
         var content =  JsonSerializer.Serialize(new
         {
-            nit = 10950081652,
+            // nit = 10950081652, // NIT com Elo
+            nit = 10932183511, // NIT sem Elo
             categoria = "AUTONOMO_OU_CONTRIBUINTE_INDIVIDUAL",
             recaptcha = recaptchaToken
         });
@@ -55,6 +58,12 @@ public class NitOwnershipCheckerPluginTest
 
         TestContext.WriteLine($"Status: {(int)response.StatusCode} {response.StatusCode}");
         TestContext.WriteLine(responseBody);
+
+        JObject obj = JObject.Parse(responseBody);
+
+        var contributor = obj["contribuinte"] as JObject;
+
+        bool isLinked = contributor?.SelectToken("name") != null;
         
         Assert.That(response.IsSuccessStatusCode, Is.True, responseBody);
     }
