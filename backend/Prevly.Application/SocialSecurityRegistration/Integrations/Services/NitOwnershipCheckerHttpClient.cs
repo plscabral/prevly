@@ -9,8 +9,8 @@ using System.Text.Json;
 
 namespace Prevly.Application.SocialSecurityRegistration.Integrations.Services;
 
-public sealed class NitOwnershipCheckerHttpClient(
-    ILogger<NitOwnershipCheckerHttpClient> logger,
+public sealed class NitOwnershipChecker(
+    ILogger<NitOwnershipChecker> logger,
     NitOwnershipCheckerHttpClientConfig? config = null
 ) : INitOwnershipChecker
 {

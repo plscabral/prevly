@@ -1,9 +1,7 @@
 using Provly.Shared.Captcha;
-using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using Newtonsoft.Json.Linq;
 
 namespace Prevly.Test;

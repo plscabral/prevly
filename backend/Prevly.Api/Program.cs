@@ -5,11 +5,8 @@ using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
 using Prevly.Application.Person.Interfaces;
 using Prevly.Application.Person.Services;
-using Prevly.Application.SocialSecurityRegistration.Integrations.Interfaces;
-using Prevly.Application.SocialSecurityRegistration.Integrations.Services;
 using Prevly.Application.SocialSecurityRegistration.Interfaces;
 using Prevly.Application.SocialSecurityRegistration.Services;
-using Prevly.Api.Workers;
 using Prevly.Domain.Interfaces;
 using Prevly.Infrastructure;
 using Provly.Shared.Security;
@@ -65,15 +62,14 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+// services
+builder.Services.AddScoped<IPersonService, PersonService>();
+builder.Services.AddScoped<ISocialSecurityRegistrationService, SocialSecurityRegistrationService>();
+
 // repositories
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<IPersonRepository, PersonRepository>();
 builder.Services.AddScoped<ISocialSecurityRegistrationRepository, SocialSecurityRegistrationRepository>();
-builder.Services.AddScoped<IPersonService, PersonService>();
-builder.Services.AddScoped<ISocialSecurityRegistrationService, SocialSecurityRegistrationService>();
-builder.Services.AddScoped<NitOwnershipCheckerHttpClient>();
-builder.Services.AddScoped<INitOwnershipChecker>(sp => sp.GetRequiredService<NitOwnershipCheckerHttpClient>());
-builder.Services.AddHostedService<NitOwnershipCheckWorker>();
 
 var app = builder.Build();
 
@@ -89,9 +85,7 @@ app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();
 
-
 app.MapControllers();
 app.MapHealthChecks("/healthz");
-
 
 app.Run();

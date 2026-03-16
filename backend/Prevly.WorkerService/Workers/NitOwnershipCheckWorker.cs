@@ -1,6 +1,6 @@
 using Prevly.Application.SocialSecurityRegistration.Interfaces;
 
-namespace Prevly.Api.Workers;
+namespace Prevly.WorkerService.Workers;
 
 public sealed class NitOwnershipCheckWorker(
     IServiceProvider serviceProvider,

@@ -15,7 +15,7 @@ namespace Prevly.Application.SocialSecurityRegistration.Services;
 public sealed class SocialSecurityRegistrationService(
     ISocialSecurityRegistrationRepository socialSecurityRegistrationRepository,
     IPersonRepository personRepository,
-    INitOwnershipChecker nitOwnershipChecker
+    INitOwnershipChecker nitOwnershipCheckerHttpClient
 ) : ISocialSecurityRegistrationService
 {
     private static readonly Regex NitRegex = new(@"(?<!\d)(?:\d[\s.\-]?){11}(?!\d)", RegexOptions.Compiled);
@@ -93,7 +93,7 @@ public sealed class SocialSecurityRegistrationService(
 
                 try
                 {
-                    var result = await nitOwnershipChecker.CheckAsync(item.Number, cancellationToken);
+                    var result = await nitOwnershipCheckerHttpClient.CheckAsync(item.Number, cancellationToken);
 
                     item.OwnershipCheckedAt = DateTime.UtcNow;
                     if (result.BelongsToSomeone)

@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using Microsoft.AspNetCore.Mvc;
+using Prevly.Api.SocialSecurityRegistration.Dtos;
 using Prevly.Application.SocialSecurityRegistration.Dtos;
 using Prevly.Application.SocialSecurityRegistration.Interfaces;
 using SharpCompress.Archives.Rar;
@@ -83,19 +84,6 @@ public class SocialSecurityRegistrationController(
             logger.LogError(e, e.Message);
             return StatusCode(500, "Erro ao importar NITs.");
         }
-    }
-
-    public sealed class ImportPdfRequestDto
-    {
-        public IFormFile? File { get; set; }
-        public string? PersonId { get; set; }
-    }
-
-    public sealed class ImportSimpleRequestDto
-    {
-        public string? Number { get; set; }
-        public List<string>? Numbers { get; set; }
-        public string? PersonId { get; set; }
     }
 
     [HttpPost("process-pending-ownership")]
