@@ -5,6 +5,6 @@ namespace Prevly.Application.Auth.Dtos
         int ExpiresInMinutes,
         string AccountId,
         string Name,
-        string Email
+        string Login
     );
 }

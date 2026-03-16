@@ -44,6 +44,7 @@ public sealed class PersonService(IPersonRepository personRepository) : IPersonS
             Cpf = request.Cpf.Trim(),
             Phone = request.Phone?.Trim(),
             WhatsApp = request.WhatsApp?.Trim(),
+            GovPassword = request.GovPassword?.Trim(),
             Age = request.Age,
             BirthDate = request.BirthDate,
             CreatedAt = DateTime.UtcNow
@@ -63,6 +64,7 @@ public sealed class PersonService(IPersonRepository personRepository) : IPersonS
         existingPerson.Cpf = dto.Cpf.Trim();
         existingPerson.Phone = dto.Phone?.Trim();
         existingPerson.WhatsApp = dto.WhatsApp?.Trim();
+        existingPerson.GovPassword = dto.GovPassword?.Trim();
         existingPerson.Age = dto.Age;
         existingPerson.BirthDate = dto.BirthDate;
 

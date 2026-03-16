@@ -5,14 +5,18 @@ using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
 using Prevly.Application.Person.Interfaces;
 using Prevly.Application.Person.Services;
+using Prevly.Application.SocialSecurityRegistration.Integrations.Interfaces;
+using Prevly.Application.SocialSecurityRegistration.Integrations.Services;
 using Prevly.Application.SocialSecurityRegistration.Interfaces;
 using Prevly.Application.SocialSecurityRegistration.Services;
+using Prevly.Domain.Entities;
 using Prevly.Domain.Interfaces;
 using Prevly.Infrastructure;
 using Provly.Shared.Security;
 using Provly.Shared.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
+const string FrontendCorsPolicy = "FrontendCorsPolicy";
 
 builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection(nameof(MongoDbSettings)));
 builder.Services.AddSingleton<MongoDbSettings>(sp => sp.GetRequiredService<IOptions<MongoDbSettings>>().Value);
@@ -61,17 +65,33 @@ builder.Services.AddHealthChecks();
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddCors(options =>
+{
+    var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ??
+        ["http://localhost:3000"];
+    
+    options.AddPolicy(FrontendCorsPolicy, policy =>
+        policy.WithOrigins(allowedOrigins)
+            .AllowAnyMethod()
+            .AllowAnyHeader());
+});
 
 // services
 builder.Services.AddScoped<IPersonService, PersonService>();
 builder.Services.AddScoped<ISocialSecurityRegistrationService, SocialSecurityRegistrationService>();
+
 
 // repositories
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<IPersonRepository, PersonRepository>();
 builder.Services.AddScoped<ISocialSecurityRegistrationRepository, SocialSecurityRegistrationRepository>();
 
+// builder.Services.AddScoped<NitOwnershipChecker>();
+builder.Services.AddScoped<INitOwnershipChecker, NitOwnershipChecker>();
+
 var app = builder.Build();
+
+await SeedDefaultAdminAsync(app.Services);
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -81,6 +101,7 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+app.UseCors(FrontendCorsPolicy);
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -89,3 +110,33 @@ app.MapControllers();
 app.MapHealthChecks("/healthz");
 
 app.Run();
+
+static async Task SeedDefaultAdminAsync(IServiceProvider services)
+{
+    await using var scope = services.CreateAsyncScope();
+    var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("SeedDefaultAdmin");
+    var accountRepository = scope.ServiceProvider.GetRequiredService<IAccountRepository>();
+
+    try
+    {
+        var filter = Builders<Account>.Filter.Eq(x => x.Login, "admin");
+        var existing = await accountRepository.GetOneAsync(filter);
+
+        if (existing is not null)
+            return;
+
+        await accountRepository.CreateAsync(new Account
+        {
+            Name = "Administrador",
+            Login = "admin",
+            Password = "admin",
+            CreatedAt = DateTime.UtcNow
+        });
+
+        logger.LogInformation("Conta padrao admin/admin criada com sucesso.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogWarning(ex, "Nao foi possivel garantir a conta padrao admin/admin.");
+    }
+}

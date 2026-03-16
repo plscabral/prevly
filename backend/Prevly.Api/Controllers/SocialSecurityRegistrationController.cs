@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Prevly.Api.SocialSecurityRegistration.Dtos;
 using Prevly.Application.SocialSecurityRegistration.Dtos;
 using Prevly.Application.SocialSecurityRegistration.Interfaces;
+using Provly.Shared.Pagination;
 using SharpCompress.Archives.Rar;
 
 namespace Prevly.Api.Controllers;
@@ -14,6 +15,26 @@ public class SocialSecurityRegistrationController(
     ISocialSecurityRegistrationService socialSecurityRegistrationService
 ) : AuthorizeController
 {
+    [HttpGet]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<PagedResult<Prevly.Domain.Entities.SocialSecurityRegistration>>> GetPaginated(
+        [FromQuery] FilterSocialSecurityRegistrationDto dto
+    )
+    {
+        try
+        {
+            var result = await socialSecurityRegistrationService.GetPaginatedAsync(dto);
+            return Ok(result);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, e.Message);
+            return StatusCode(400, e.Message);
+        }
+    }
+
     [HttpPost("import-pdf")]
     [Consumes("multipart/form-data")]
     [ProducesResponseType(StatusCodes.Status200OK)]

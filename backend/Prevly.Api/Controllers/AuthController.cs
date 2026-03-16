@@ -22,17 +22,17 @@ public class AuthController(
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<AuthInfoDto>> Authenticate([FromBody] AuthDto request)
     {
-        var email = request.Email.Trim();
-        var filter = Builders<Account>.Filter.Eq(x => x.Email, email);
+        var login = request.Login.Trim();
+        var filter = Builders<Account>.Filter.Eq(x => x.Login, login);
         var account = await accountRepository.GetOneAsync(filter);
 
         if (account is null || !string.Equals(account.Password, request.Password, StringComparison.Ordinal))
-            return Unauthorized(new { message = "Email ou senha invalidos." });
+            return Unauthorized(new { message = "Login ou senha invalidos." });
 
         if (
             string.IsNullOrWhiteSpace(account.Id) ||
             string.IsNullOrWhiteSpace(account.Name) ||
-            string.IsNullOrWhiteSpace(account.Email)
+            string.IsNullOrWhiteSpace(account.Login)
             )
         {
             return Problem(
@@ -41,14 +41,14 @@ public class AuthController(
             );
         }
 
-        var token = jwtTokenGenerator.GenerateToken(account.Id, account.Name, account.Email);
+        var token = jwtTokenGenerator.GenerateToken(account.Id, account.Name, account.Login);
 
         return Ok(new AuthInfoDto(
             Token: token,
             ExpiresInMinutes: GetExpirationInMinutes(),
             AccountId: account.Id,
             Name: account.Name,
-            Email: account.Email
+            Login: account.Login
         ));
     }
 

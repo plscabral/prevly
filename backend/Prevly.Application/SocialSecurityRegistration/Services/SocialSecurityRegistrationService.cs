@@ -1,5 +1,8 @@
 using System.Globalization;
+using System.Diagnostics;
+using System.Text;
 using System.Text.RegularExpressions;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using Prevly.Application.SocialSecurityRegistration.Dtos;
 using Prevly.Application.SocialSecurityRegistration.Integrations.Interfaces;
@@ -15,11 +18,47 @@ namespace Prevly.Application.SocialSecurityRegistration.Services;
 public sealed class SocialSecurityRegistrationService(
     ISocialSecurityRegistrationRepository socialSecurityRegistrationRepository,
     IPersonRepository personRepository,
-    INitOwnershipChecker nitOwnershipCheckerHttpClient
+    INitOwnershipChecker nitOwnershipChecker
 ) : ISocialSecurityRegistrationService
 {
     private static readonly Regex NitRegex = new(@"(?<!\d)(?:\d[\s.\-]?){11}(?!\d)", RegexOptions.Compiled);
     private static readonly Regex DateRegex = new(@"\b\d{2}[/-]\d{2}[/-]\d{4}\b", RegexOptions.Compiled);
+
+    public Task<PagedResult<SocialSecurityRegistrationEntity>> GetPaginatedAsync(FilterSocialSecurityRegistrationDto parameters)
+    {
+        var filters = new List<FilterDefinition<SocialSecurityRegistrationEntity>>();
+
+        if (!string.IsNullOrWhiteSpace(parameters.Number))
+        {
+            var numberPattern = Regex.Escape(parameters.Number.Trim());
+            filters.Add(Builders<SocialSecurityRegistrationEntity>.Filter.Regex(
+                registration => registration.Number,
+                new BsonRegularExpression(numberPattern, "i")
+            ));
+        }
+
+        if (parameters.Status.HasValue)
+        {
+            filters.Add(Builders<SocialSecurityRegistrationEntity>.Filter.Eq(
+                registration => registration.Status,
+                parameters.Status.Value
+            ));
+        }
+
+        if (!string.IsNullOrWhiteSpace(parameters.PersonId))
+        {
+            filters.Add(Builders<SocialSecurityRegistrationEntity>.Filter.Eq(
+                registration => registration.PersonId,
+                parameters.PersonId.Trim()
+            ));
+        }
+
+        var filter = filters.Count > 0
+            ? Builders<SocialSecurityRegistrationEntity>.Filter.And(filters)
+            : Builders<SocialSecurityRegistrationEntity>.Filter.Empty;
+
+        return socialSecurityRegistrationRepository.GetPaginatedAsync(filter, parameters);
+    }
 
     public async Task<ImportSocialSecurityRegistrationsResultDto> ImportFromPdfAsync(
         Stream pdfStream,
@@ -31,7 +70,11 @@ public sealed class SocialSecurityRegistrationService(
         ValidatePdfFile(pdfStream, fileName, contentType);
 
         var text = await ExtractTextAsync(pdfStream);
-        var candidates = ExtractCandidates(text);
+        
+         var candidates = ExtractCandidates(text)
+            .Distinct()
+            .ToList();
+         
         return await SaveUniqueValidNitsAsync(candidates, personId);
     }
 
@@ -93,7 +136,7 @@ public sealed class SocialSecurityRegistrationService(
 
                 try
                 {
-                    var result = await nitOwnershipCheckerHttpClient.CheckAsync(item.Number, cancellationToken);
+                    var result = await nitOwnershipChecker.CheckAsync(item.Number, cancellationToken);
 
                     item.OwnershipCheckedAt = DateTime.UtcNow;
                     if (result.BelongsToSomeone)
@@ -267,9 +310,7 @@ public sealed class SocialSecurityRegistrationService(
                 PersonId: person?.Id,
                 PersonName: person?.Name,
                 PersonCpf: person?.Cpf,
-                ContributionYears: registration.ContributionYears,
-                FirstContributionDate: registration.FirstContributionDate,
-                LastContributionDate: registration.LastContributionDate
+                ContributionYears: registration.ContributionYears
             ));
         }
 
@@ -301,7 +342,6 @@ public sealed class SocialSecurityRegistrationService(
 
             var registration = new SocialSecurityRegistrationEntity
             {
-                Id = Guid.NewGuid().ToString("N"),
                 Number = number,
                 PersonId = personId,
                 CreatedAt = DateTime.UtcNow,
@@ -345,11 +385,157 @@ public sealed class SocialSecurityRegistrationService(
     {
         await using var memoryStream = new MemoryStream();
         await pdfStream.CopyToAsync(memoryStream);
-        memoryStream.Position = 0;
+        var pdfBytes = memoryStream.ToArray();
+        var nativeText = ExtractNativePdfText(pdfBytes);
 
-        using var pdf = PdfDocument.Open(memoryStream);
+        // Fast path: if native text already has NIT candidates, no OCR needed.
+        if (ExtractCandidates(nativeText).Count > 0)
+            return nativeText;
 
+        var ocrText = await TryExtractTextWithOcrAsync(pdfBytes);
+        return string.Join(
+            Environment.NewLine,
+            new[] { nativeText, ocrText }.Where(x => !string.IsNullOrWhiteSpace(x))
+        );
+    }
+
+    private static string ExtractNativePdfText(byte[] pdfBytes)
+    {
+        using var stream = new MemoryStream(pdfBytes);
+        using var pdf = PdfDocument.Open(stream);
         return string.Join(Environment.NewLine, pdf.GetPages().Select(page => page.Text));
+    }
+
+    private static async Task<string> TryExtractTextWithOcrAsync(byte[] pdfBytes)
+    {
+        var hasPdfToPpm = await IsCommandAvailableAsync("pdftoppm", "-h");
+        var hasTesseract = await IsCommandAvailableAsync("tesseract", "--version");
+
+        if (!hasPdfToPpm || !hasTesseract)
+            return string.Empty;
+
+        var tempRoot = Path.Combine(Path.GetTempPath(), $"prevly-ocr-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempRoot);
+
+        try
+        {
+            var inputPdfPath = Path.Combine(tempRoot, "input.pdf");
+            await File.WriteAllBytesAsync(inputPdfPath, pdfBytes);
+
+            var outputPrefix = Path.Combine(tempRoot, "page");
+            var render = await RunProcessAsync(
+                "pdftoppm",
+                $"-f 1 -l 12 -r 300 -png \"{inputPdfPath}\" \"{outputPrefix}\"",
+                timeoutSeconds: 120
+            );
+
+            if (render.ExitCode != 0)
+                return string.Empty;
+
+            var images = Directory.GetFiles(tempRoot, "page-*.png")
+                .OrderBy(x => x)
+                .ToList();
+
+            if (images.Count == 0)
+                return string.Empty;
+
+            var allText = new StringBuilder();
+
+            foreach (var imagePath in images)
+            {
+                // Multiple PSM modes improve extraction for tabular and vertical text.
+                foreach (var args in new[]
+                         {
+                             $"\"{imagePath}\" stdout -l por+eng --psm 6",
+                             $"\"{imagePath}\" stdout -l por+eng --psm 11",
+                             $"\"{imagePath}\" stdout -l por+eng --psm 5 -c textord_tabfind_vertical_text=1"
+                         })
+                {
+                    var ocr = await RunProcessAsync("tesseract", args, timeoutSeconds: 90);
+                    if (ocr.ExitCode == 0 && !string.IsNullOrWhiteSpace(ocr.StdOut))
+                    {
+                        allText.AppendLine(ocr.StdOut);
+                    }
+                }
+            }
+
+            return allText.ToString();
+        }
+        catch
+        {
+            return string.Empty;
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(tempRoot))
+                    Directory.Delete(tempRoot, recursive: true);
+            }
+            catch
+            {
+                // best effort cleanup
+            }
+        }
+    }
+
+    private static async Task<bool> IsCommandAvailableAsync(string command, string args)
+    {
+        try
+        {
+            var result = await RunProcessAsync(command, args, timeoutSeconds: 20);
+            return result.ExitCode == 0 || !string.IsNullOrWhiteSpace(result.StdOut) || !string.IsNullOrWhiteSpace(result.StdErr);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static async Task<(int ExitCode, string StdOut, string StdErr)> RunProcessAsync(
+        string fileName,
+        string arguments,
+        int timeoutSeconds
+    )
+    {
+        using var process = new Process
+        {
+            StartInfo = new ProcessStartInfo
+            {
+                FileName = fileName,
+                Arguments = arguments,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            }
+        };
+
+        process.Start();
+
+        var stdOutTask = process.StandardOutput.ReadToEndAsync();
+        var stdErrTask = process.StandardError.ReadToEndAsync();
+        var waitTask = process.WaitForExitAsync();
+        var timeoutTask = Task.Delay(TimeSpan.FromSeconds(timeoutSeconds));
+
+        var completed = await Task.WhenAny(waitTask, timeoutTask);
+        if (completed == timeoutTask)
+        {
+            try
+            {
+                process.Kill(entireProcessTree: true);
+            }
+            catch
+            {
+                // ignore kill failures
+            }
+
+            throw new TimeoutException($"Processo '{fileName}' excedeu o timeout de {timeoutSeconds}s.");
+        }
+
+        var stdOut = await stdOutTask;
+        var stdErr = await stdErrTask;
+        return (process.ExitCode, stdOut, stdErr);
     }
 
     private static List<string> ExtractCandidates(string text)

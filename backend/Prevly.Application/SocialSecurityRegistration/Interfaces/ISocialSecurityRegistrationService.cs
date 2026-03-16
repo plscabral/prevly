@@ -1,9 +1,14 @@
 using Prevly.Application.SocialSecurityRegistration.Dtos;
 
+using Provly.Shared.Pagination;
+
 namespace Prevly.Application.SocialSecurityRegistration.Interfaces;
 
 public interface ISocialSecurityRegistrationService
 {
+    Task<PagedResult<Prevly.Domain.Entities.SocialSecurityRegistration>> GetPaginatedAsync(
+        FilterSocialSecurityRegistrationDto dto
+    );
     Task<ImportSocialSecurityRegistrationsResultDto> ImportFromPdfAsync(
         Stream pdfStream,
         string fileName,

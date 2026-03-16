@@ -5,7 +5,5 @@ public sealed record NitReportItemDto(
     string? PersonId,
     string? PersonName,
     string? PersonCpf,
-    int ContributionYears,
-    DateTime FirstContributionDate,
-    DateTime LastContributionDate
+    int ContributionYears
 );
