@@ -33,7 +33,8 @@ import {
   postApiNitBindPersonResponseSuccess,
   usePostApiNitBindPerson,
 } from "@/lib/api/generated/nit/nit";
-import { NitStatus } from "@/lib/api/generated/model";
+import type { GetApiNitParams } from "@/lib/api/generated/model/getApiNitParams";
+import { NitStatus } from "@/lib/types";
 
 interface FormErrors {
   name?: string;
@@ -76,7 +77,7 @@ export function PersonForm() {
   const nitsQuery = useGetApiNit({
     PageNumber: 1,
     PageSize: 500,
-    Status: NitStatus.NUMBER_4,
+    Status: NitStatus.ReadyToUse as GetApiNitParams["Status"],
   });
 
   const nitOptions = useMemo(

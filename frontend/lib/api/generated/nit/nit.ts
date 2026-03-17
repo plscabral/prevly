@@ -28,15 +28,15 @@ import type {
   ContributionDetailsImportResultDto,
   CreateNitReportRequestDto,
   GetApiNitParams,
-  ImportSimpleRequestDto,
   ImportNitsResultDto,
+  ImportSimpleRequestDto,
+  NitPagedResult,
   NitReportItemDto,
   PendingContributionNitDto,
   PostApiNitImportContributionDetailsBody,
   PostApiNitImportPdfBody,
   ProblemDetails,
-  ProcessOwnershipChecksResultDto,
-  NitPagedResult
+  ProcessOwnershipChecksResultDto
 } from '../model';
 
 import { customFetch } from '../../http-client';

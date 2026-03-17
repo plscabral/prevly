@@ -16,7 +16,7 @@ import {
   getApiNitResponseSuccess,
   useGetApiNit,
 } from "@/lib/api/generated/nit/nit";
-import { NitStatus } from "@/lib/api/generated/model";
+import { NitStatus } from "@/lib/types";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function DashboardPage() {
@@ -32,16 +32,20 @@ export default function DashboardPage() {
   const totalPersons = persons.length;
   const personsWithNit = persons.filter((person) => person.nitId).length;
   const totalNits = nits.length;
-  const boundNits = nits.filter((nit) => nit.status === NitStatus.NUMBER_5).length;
-  const pendingNits = nits.filter(
-    (nit) =>
-      nit.status === NitStatus.NUMBER_0 ||
-      nit.status === NitStatus.NUMBER_3 ||
-      nit.status === NitStatus.NUMBER_4,
-  ).length;
-  const processingNits = nits.filter(
-    (nit) => nit.status === NitStatus.NUMBER_1,
-  ).length;
+  const boundNits = nits.filter((nit) => (nit.status as number) === NitStatus.Bound).length;
+  const pendingStatuses = new Set<number>([
+    NitStatus.PendingVerification,
+    NitStatus.Unbound,
+    NitStatus.PendingPeriodExtraction,
+    NitStatus.ReadyToUse,
+    NitStatus.QueryError,
+  ]);
+  const processingStatuses = new Set<number>([
+    NitStatus.VerificationInProgress,
+    NitStatus.PeriodExtractionInProgress,
+  ]);
+  const pendingNits = nits.filter((nit) => pendingStatuses.has(nit.status as number)).length;
+  const processingNits = nits.filter((nit) => processingStatuses.has(nit.status as number)).length;
 
   const stats = [
     {

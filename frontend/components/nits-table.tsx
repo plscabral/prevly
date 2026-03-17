@@ -47,9 +47,8 @@ import {
 import { cn } from "@/lib/utils";
 import {
   Nit,
-  NitStatus,
 } from "@/lib/api/generated/model";
-import { statusColors, statusLabels } from "@/lib/types";
+import { NitStatus, statusColors, statusLabels } from "@/lib/types";
 import { toast } from "sonner";
 
 interface NitsTableProps {
@@ -273,8 +272,9 @@ export function NitsTable({
                 <Link2 className="mr-2 h-4 w-4" />
                 Copiar NIT
               </DropdownMenuItem>
-              {nit.status ===
-                NitStatus.NUMBER_4 && (
+              {([NitStatus.Unbound, NitStatus.ReadyToUse] as number[]).includes(
+                nit.status as number,
+              ) && (
                 <DropdownMenuItem onClick={() => onBindPerson(nit)}>
                   <UserPlus className="mr-2 h-4 w-4" />
                   Vincular a Pessoa
