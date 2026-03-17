@@ -29,4 +29,9 @@ public interface ISocialSecurityRegistrationService
     );
     Task BindPersonToNitAsync(BindPersonToNitDto dto);
     Task<IReadOnlyCollection<NitReportItemDto>> CreateReportAsync(CreateNitReportRequestDto dto);
+    Task<IReadOnlyCollection<Prevly.Domain.Entities.SocialSecurityRegistration>> GetForExportAsync(
+        string? query,
+        Prevly.Domain.Entities.SocialSecurityRegistrationStatus? status,
+        IReadOnlyCollection<string>? registrationIds
+    );
 }

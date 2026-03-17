@@ -14,9 +14,17 @@ import {
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
-function ReadonlyField({ label, value }: { label: string; value?: string | number | null }) {
+function ReadonlyField({
+  label,
+  value,
+}: {
+  label: string;
+  value?: string | number | null;
+}) {
   const displayValue =
-    value === undefined || value === null || `${value}`.trim() === "" ? "Não informado" : `${value}`;
+    value === undefined || value === null || `${value}`.trim() === ""
+      ? "Não informado"
+      : `${value}`;
   return (
     <div className="space-y-2">
       <p className="text-sm text-foreground">{label}</p>
@@ -37,11 +45,15 @@ export default function PessoaDetalhePage() {
   const handleDelete = async () => {
     try {
       await deleteMutation.mutateAsync({ id: params.id });
-      await queryClient.invalidateQueries({ queryKey: getGetApiPersonQueryKey() });
+      await queryClient.invalidateQueries({
+        queryKey: getGetApiPersonQueryKey(),
+      });
       toast.success("Pessoa removida.");
       router.push("/pessoas");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao remover pessoa.");
+      toast.error(
+        error instanceof Error ? error.message : "Erro ao remover pessoa.",
+      );
     }
   };
 
@@ -71,7 +83,9 @@ export default function PessoaDetalhePage() {
     );
   }
 
-  const personResponse = personQuery.data as getApiPersonIdResponseSuccess | undefined;
+  const personResponse = personQuery.data as
+    | getApiPersonIdResponseSuccess
+    | undefined;
   const person = personResponse?.data;
 
   if (personQuery.isError || !person) {
@@ -94,12 +108,19 @@ export default function PessoaDetalhePage() {
             className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
-            Voltar para Pessoas
+            Voltar
           </Link>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">{person.name}</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            {person.name}
+          </h1>
           <p className="mt-1 text-sm text-muted-foreground">CPF {person.cpf}</p>
         </div>
-        <Button variant="destructive" className="gap-2" onClick={handleDelete} disabled={deleteMutation.isPending}>
+        <Button
+          variant="destructive"
+          className="gap-2"
+          onClick={handleDelete}
+          disabled={deleteMutation.isPending}
+        >
           {deleteMutation.isPending ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
@@ -117,13 +138,23 @@ export default function PessoaDetalhePage() {
           <ReadonlyField label="CPF" value={person.cpf} />
           <ReadonlyField label="Telefone" value={person.phone} />
           <ReadonlyField label="WhatsApp" value={person.whatsApp} />
-          <ReadonlyField label="Idade" value={person.age ? `${person.age} anos` : null} />
+          <ReadonlyField
+            label="Idade"
+            value={person.age ? `${person.age} anos` : null}
+          />
           <ReadonlyField label="Senha Gov.br" value={person.govPassword} />
           <ReadonlyField
             label="Data de nascimento"
-            value={person.birthDate ? new Date(person.birthDate).toLocaleDateString("pt-BR") : null}
+            value={
+              person.birthDate
+                ? new Date(person.birthDate).toLocaleDateString("pt-BR")
+                : null
+            }
           />
-          <ReadonlyField label="NIT vinculado" value={person.socialSecurityRegistrationId} />
+          <ReadonlyField
+            label="NIT vinculado"
+            value={person.socialSecurityRegistrationId}
+          />
         </div>
       </section>
     </div>

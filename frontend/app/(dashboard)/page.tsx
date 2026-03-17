@@ -1,21 +1,27 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { AlertCircle, ArrowRight, CheckCircle, Clock, FileText, Users } from "lucide-react";
+import { AlertCircle, ArrowRight, CheckCircle, Clock, FileText, RefreshCw, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  getGetApiPersonQueryKey,
   getApiPersonResponseSuccess,
   useGetApiPerson,
 } from "@/lib/api/generated/person/person";
 import {
+  getGetApiSocialSecurityRegistrationQueryKey,
   getApiSocialSecurityRegistrationResponseSuccess,
   useGetApiSocialSecurityRegistration,
 } from "@/lib/api/generated/social-security-registration/social-security-registration";
 import { SocialSecurityRegistrationStatus } from "@/lib/api/generated/model";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function DashboardPage() {
+  const queryClient = useQueryClient();
+  const [forceRefreshing, setForceRefreshing] = useState(false);
   const personsQuery = useGetApiPerson({ PageNumber: 1, PageSize: 500 });
   const nitsQuery = useGetApiSocialSecurityRegistration({ PageNumber: 1, PageSize: 500 });
 
@@ -74,13 +80,41 @@ export default function DashboardPage() {
 
   const recentPersons = persons.slice(0, 5);
   const recentNits = nits.slice(0, 5);
-  const dashboardLoading = personsQuery.isLoading || nitsQuery.isLoading;
+  const isRefreshing = forceRefreshing || personsQuery.isRefetching || nitsQuery.isRefetching;
+  const dashboardLoading = personsQuery.isLoading || nitsQuery.isLoading || forceRefreshing;
+
+  const handleRefresh = async () => {
+    setForceRefreshing(true);
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: getGetApiPersonQueryKey() }),
+        queryClient.invalidateQueries({
+          queryKey: getGetApiSocialSecurityRegistrationQueryKey(),
+        }),
+      ]);
+      await Promise.all([personsQuery.refetch(), nitsQuery.refetch()]);
+    } finally {
+      setForceRefreshing(false);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Dashboard</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Visão geral do sistema.</p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Dashboard</h1>
+          <p className="mt-1 text-sm text-muted-foreground">Visão geral do sistema.</p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="gap-2"
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+        >
+          <RefreshCw className={isRefreshing ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+          Atualizar
+        </Button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

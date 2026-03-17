@@ -2,18 +2,27 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { Download, Plus, Search, X } from "lucide-react";
+import { FileDown, Plus, RefreshCw, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PersonsTable } from "@/components/persons-table";
 import {
   getApiPersonResponseSuccess,
+  getGetApiPersonQueryKey,
   useGetApiPerson,
 } from "@/lib/api/generated/person/person";
+import { Person } from "@/lib/api/generated/model";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
+import { customFetchRaw } from "@/lib/api/http-client";
 
 export default function PessoasPage() {
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
+  const [forceRefreshing, setForceRefreshing] = useState(false);
+  const [selectedPersons, setSelectedPersons] = useState<Person[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
 
   const personsQuery = useGetApiPerson({ PageNumber: 1, PageSize: 500 });
   const personsResponse = personsQuery.data as
@@ -31,6 +40,64 @@ export default function PessoasPage() {
     );
   }, [persons, searchQuery]);
 
+  const isRefreshing = forceRefreshing || personsQuery.isRefetching;
+
+  const handleRefresh = async () => {
+    setForceRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: getGetApiPersonQueryKey() });
+      await personsQuery.refetch();
+    } finally {
+      setForceRefreshing(false);
+    }
+  };
+
+  const handleExport = async () => {
+    const selectedIds = selectedPersons
+      .map((person) => person.id)
+      .filter((id): id is string => Boolean(id));
+
+    if (!selectedIds.length && !filteredPersons.length) {
+      toast.error("Nenhuma pessoa para exportar.");
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const response = await customFetchRaw("/api/Person/export", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query: searchQuery.trim() || null,
+          personIds: selectedIds,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Erro ao exportar relatorio de pessoas.");
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `prevly-pessoas-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+
+      toast.success(selectedIds.length
+        ? `${selectedIds.length} pessoa(s) exportada(s).`
+        : "Relatório exportado com filtros aplicados.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao exportar relatorio de pessoas.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -43,10 +110,6 @@ export default function PessoasPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" className="gap-2" disabled>
-            <Download className="h-4 w-4" />
-            Extrair Relatório
-          </Button>
           <Button asChild>
             <Link href="/pessoas/nova" className="gap-2">
               <Plus className="h-4 w-4" />
@@ -79,39 +142,63 @@ export default function PessoasPage() {
         )}
       </div>
 
-      <div className="text-sm text-muted-foreground">
-        {filteredPersons.length}{" "}
-        {filteredPersons.length === 1
-          ? "pessoa encontrada"
-          : "pessoas encontradas"}
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-sm text-muted-foreground">
+          {filteredPersons.length}{" "}
+          {filteredPersons.length === 1
+            ? "pessoa encontrada"
+            : "pessoas encontradas"}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={isRefreshing ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+            Atualizar
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={handleExport}
+            disabled={isExporting}
+          >
+            <FileDown className="h-4 w-4" />
+            Extrair Relatório
+          </Button>
+        </div>
       </div>
 
-      {personsQuery.isLoading ? (
+      {personsQuery.isLoading || forceRefreshing ? (
         <div className="rounded-lg border border-border bg-card p-4">
           <div className="space-y-3">
-            <div className="grid grid-cols-[40px_1fr_1fr_1fr_1fr_1fr_1fr_1fr] gap-3">
+            <div className="grid grid-cols-[40px_40px_1.4fr_1fr_1.3fr_1fr_1fr_0.9fr] gap-3">
+              <Skeleton className="h-5 w-5 rounded-sm" />
               <Skeleton className="h-5 w-5 rounded-sm" />
               <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-20" />
+              <Skeleton className="h-4 w-20" />
             </div>
             {Array.from({ length: 5 }).map((_, index) => (
               <div
                 key={`persons-grid-skeleton-${index}`}
-                className="grid grid-cols-[40px_1fr_1fr_1fr_1fr_1fr_1fr_1fr] items-center gap-3"
+                className="grid grid-cols-[40px_40px_1.4fr_1fr_1.3fr_1fr_1fr_0.9fr] items-center gap-3"
               >
                 <Skeleton className="h-5 w-5 rounded-sm" />
-                <Skeleton className="h-5 w-32" />
-                <Skeleton className="h-5 w-32" />
-                <Skeleton className="h-5 w-32" />
-                <Skeleton className="h-5 w-32" />
-                <Skeleton className="h-5 w-32" />
-                <Skeleton className="h-5 w-32" />
-                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-8 w-8 rounded-md" />
+                <Skeleton className="h-5 w-[85%]" />
+                <Skeleton className="h-5 w-[75%]" />
+                <Skeleton className="h-5 w-[90%]" />
+                <Skeleton className="h-5 w-[80%]" />
+                <Skeleton className="h-5 w-[80%]" />
+                <Skeleton className="h-5 w-[70%]" />
               </div>
             ))}
           </div>
@@ -121,7 +208,7 @@ export default function PessoasPage() {
           Erro ao carregar pessoas.
         </div>
       ) : (
-        <PersonsTable data={filteredPersons} />
+        <PersonsTable data={filteredPersons} onSelectionChange={setSelectedPersons} />
       )}
     </div>
   );

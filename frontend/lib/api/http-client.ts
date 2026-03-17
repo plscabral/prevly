@@ -54,6 +54,16 @@ const extractErrorMessage = (data: unknown, status: number) => {
   return `Erro na requisicao: ${status}`;
 };
 
+const parseResponseBody = (responseText: string) => {
+  if (!responseText) return undefined;
+
+  try {
+    return JSON.parse(responseText);
+  } catch {
+    return responseText;
+  }
+};
+
 export async function customFetch<TResponse>(
   url: string,
   init?: RequestInit,
@@ -68,7 +78,7 @@ export async function customFetch<TResponse>(
   });
 
   const responseText = await request.text();
-  const parsedData = responseText ? JSON.parse(responseText) : undefined;
+  const parsedData = parseResponseBody(responseText);
   const wrappedResponse = {
     data: parsedData,
     status: request.status,
@@ -80,4 +90,19 @@ export async function customFetch<TResponse>(
   }
 
   return wrappedResponse;
+}
+
+export async function customFetchRaw(
+  url: string,
+  init?: RequestInit,
+): Promise<Response> {
+  const token = await getToken();
+
+  return fetch(withBaseUrl(url), {
+    ...init,
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...(init?.headers ?? {}),
+    },
+  });
 }

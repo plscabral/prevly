@@ -35,11 +35,44 @@ public sealed class PersonService(IPersonRepository personRepository) : IPersonS
 
     public Task<Domain.Entities.Person?> GetByIdAsync(string id) => personRepository.GetByIdAsync(id);
 
+    public async Task<IReadOnlyCollection<Domain.Entities.Person>> GetForExportAsync(
+        string? query,
+        IReadOnlyCollection<string>? personIds
+    )
+    {
+        var filterBuilder = Builders<Domain.Entities.Person>.Filter;
+        var filters = new List<FilterDefinition<Domain.Entities.Person>>();
+
+        var selectedIds = personIds?
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x.Trim())
+            .Distinct()
+            .ToList() ?? [];
+
+        if (selectedIds.Count > 0)
+        {
+            filters.Add(filterBuilder.In(person => person.Id, selectedIds));
+        }
+        else if (!string.IsNullOrWhiteSpace(query))
+        {
+            var pattern = new BsonRegularExpression(Regex.Escape(query.Trim()), "i");
+            filters.Add(filterBuilder.Or(
+                filterBuilder.Regex(person => person.Name, pattern),
+                filterBuilder.Regex(person => person.Cpf, pattern)
+            ));
+        }
+
+        var filter = filters.Count > 0
+            ? filterBuilder.And(filters)
+            : filterBuilder.Empty;
+
+        return await GetAllByFilterAsync(filter);
+    }
+
     public async Task<Domain.Entities.Person> CreateAsync(CreatePersonDto request)
     {
         var person = new Domain.Entities.Person
         {
-            Id = Guid.NewGuid().ToString("N"),
             Name = request.Name.Trim(),
             Cpf = request.Cpf.Trim(),
             Phone = request.Phone?.Trim(),
@@ -80,5 +113,34 @@ public sealed class PersonService(IPersonRepository personRepository) : IPersonS
 
         await personRepository.DeleteAsync(id);
         return true;
+    }
+
+    private async Task<IReadOnlyCollection<Domain.Entities.Person>> GetAllByFilterAsync(
+        FilterDefinition<Domain.Entities.Person> filter
+    )
+    {
+        const int pageSize = 500;
+        var pageNumber = 1;
+        var all = new List<Domain.Entities.Person>();
+
+        while (true)
+        {
+            var page = await personRepository.GetPaginatedAsync(
+                filter,
+                new PaginationParameters { PageNumber = pageNumber, PageSize = pageSize }
+            );
+
+            if (page.Data.Count == 0)
+                break;
+
+            all.AddRange(page.Data);
+
+            if (all.Count >= page.TotalRecords)
+                break;
+
+            pageNumber++;
+        }
+
+        return all;
     }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Download, Filter, Plus, Search, X } from "lucide-react";
+import { FileDown, Filter, Plus, RefreshCw, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -30,16 +30,22 @@ import {
 } from "@/lib/api/generated/social-security-registration/social-security-registration";
 import {
   getApiPersonResponseSuccess,
+  getGetApiPersonQueryKey,
   useGetApiPerson,
 } from "@/lib/api/generated/person/person";
+import { SocialSecurityRegistration } from "@/lib/api/generated/model";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { customFetchRaw } from "@/lib/api/http-client";
 
 export default function NitsPage() {
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [importOpen, setImportOpen] = useState(false);
+  const [forceRefreshing, setForceRefreshing] = useState(false);
+  const [selectedNits, setSelectedNits] = useState<SocialSecurityRegistration[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
 
   const nitsQuery = useGetApiSocialSecurityRegistration({
     PageNumber: 1,
@@ -105,6 +111,70 @@ export default function NitsPage() {
   };
 
   const hasFilters = searchQuery || statusFilter !== "all";
+  const isRefreshing =
+    forceRefreshing || nitsQuery.isRefetching || personsQuery.isRefetching;
+
+  const handleRefresh = async () => {
+    setForceRefreshing(true);
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: getGetApiSocialSecurityRegistrationQueryKey(),
+        }),
+        queryClient.invalidateQueries({ queryKey: getGetApiPersonQueryKey() }),
+      ]);
+      await Promise.all([nitsQuery.refetch(), personsQuery.refetch()]);
+    } finally {
+      setForceRefreshing(false);
+    }
+  };
+
+  const handleExport = async () => {
+    const selectedIds = selectedNits
+      .map((nit) => nit.id)
+      .filter((id): id is string => Boolean(id));
+
+    if (!selectedIds.length && !filteredNits.length) {
+      toast.error("Nenhum NIT para exportar.");
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const response = await customFetchRaw("/api/SocialSecurityRegistration/export", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          query: searchQuery.trim() || null,
+          status: statusFilter === "all" ? null : Number(statusFilter),
+          registrationIds: selectedIds,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Erro ao exportar relatorio de NITs.");
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `prevly-nits-${new Date().toISOString().slice(0, 10)}.xlsx`;
+      anchor.click();
+      URL.revokeObjectURL(url);
+
+      toast.success(selectedIds.length
+        ? `${selectedIds.length} NIT(s) exportado(s).`
+        : "Relatório exportado com filtros aplicados.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao exportar relatorio de NITs.");
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -118,10 +188,6 @@ export default function NitsPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" className="gap-2" disabled>
-            <Download className="h-4 w-4" />
-            Extrair Relatório
-          </Button>
           <Dialog open={importOpen} onOpenChange={setImportOpen}>
             <DialogTrigger asChild>
               <Button className="gap-2">
@@ -183,14 +249,38 @@ export default function NitsPage() {
         )}
       </div>
 
-      <div className="text-sm text-muted-foreground">
-        {filteredNits.length}{" "}
-        {filteredNits.length === 1
-          ? "registro encontrado"
-          : "registros encontrados"}
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-sm text-muted-foreground">
+          {filteredNits.length}{" "}
+          {filteredNits.length === 1
+            ? "registro encontrado"
+            : "registros encontrados"}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={handleRefresh}
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={isRefreshing ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+            Atualizar
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-2"
+            onClick={handleExport}
+            disabled={isExporting}
+          >
+            <FileDown className="h-4 w-4" />
+            Extrair Relatório
+          </Button>
+        </div>
       </div>
 
-      {nitsQuery.isLoading ? (
+      {nitsQuery.isLoading || forceRefreshing ? (
         <div className="rounded-lg border border-border bg-card p-4">
           <div className="space-y-3">
             <div className="grid grid-cols-[40px_1fr_1fr_1fr_1fr_1fr_1fr_1fr] gap-3">
@@ -229,6 +319,7 @@ export default function NitsPage() {
           data={filteredNits}
           personNamesById={personNamesById}
           onBindPerson={(registration) => onBindPerson(registration.id)}
+          onSelectionChange={setSelectedNits}
         />
       )}
     </div>

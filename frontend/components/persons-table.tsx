@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   ColumnDef,
   flexRender,
@@ -11,7 +13,7 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowUpDown, Check, Copy, Eye, EyeOff, FileText } from "lucide-react";
+import { ArrowUpDown, CalendarClock, Check, Copy, Eye, EyeOff, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -27,6 +29,14 @@ import { toast } from "sonner";
 
 interface PersonsTableProps {
   data: Person[];
+  onSelectionChange?: (selected: Person[]) => void;
+}
+
+function formatDistanceFromNowPtBr(value?: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return formatDistanceToNow(date, { addSuffix: true, locale: ptBR });
 }
 
 function PasswordCell({ password }: { password?: string | null }) {
@@ -71,7 +81,7 @@ function PasswordCell({ password }: { password?: string | null }) {
   );
 }
 
-export function PersonsTable({ data }: PersonsTableProps) {
+export function PersonsTable({ data, onSelectionChange }: PersonsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
@@ -141,32 +151,13 @@ export function PersonsTable({ data }: PersonsTableProps) {
       ),
     },
     {
-      accessorKey: "age",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          className="-ml-3 h-8 text-xs font-medium"
-        >
-          Idade
-          <ArrowUpDown className="ml-1.5 size-3" />
-        </Button>
-      ),
-      cell: ({ row }) => (
-        <span className="tabular-nums">
-          {row.original.age ? `${row.original.age} anos` : "-"}
-        </span>
-      ),
-    },
-    {
       accessorKey: "govPassword",
       header: "Senha Gov.br",
       cell: ({ row }) => <PasswordCell password={row.original.govPassword} />,
     },
     {
       id: "mainContact",
-      header: "Contato",
+      header: "WhatsApp",
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground">
           {row.original.phone || row.original.whatsApp || "-"}
@@ -184,14 +175,18 @@ export function PersonsTable({ data }: PersonsTableProps) {
     },
     {
       accessorKey: "createdAt",
-      header: "Cadastrado em",
-      cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">
-          {row.original.createdAt
-            ? new Date(row.original.createdAt).toLocaleDateString("pt-BR")
-            : "-"}
-        </span>
-      ),
+      header: "Criado em",
+      cell: ({ row }) => {
+        const createdAtDistance = formatDistanceFromNowPtBr(row.original.createdAt);
+        if (!createdAtDistance) return <span className="text-sm text-muted-foreground">-</span>;
+
+        return (
+          <p className="flex items-center text-xs text-muted-foreground">
+            <CalendarClock className="mr-2 h-3.5 w-3.5" />
+            {createdAtDistance}
+          </p>
+        );
+      },
     },
   ];
 
@@ -205,6 +200,15 @@ export function PersonsTable({ data }: PersonsTableProps) {
     enableRowSelection: true,
     state: { sorting, rowSelection },
   });
+
+  useEffect(() => {
+    if (!onSelectionChange) return;
+    const selected = Object.entries(rowSelection)
+      .filter(([, isSelected]) => isSelected)
+      .map(([rowId]) => data[Number(rowId)])
+      .filter((person): person is Person => Boolean(person));
+    onSelectionChange(selected);
+  }, [onSelectionChange, rowSelection, data]);
 
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-card">

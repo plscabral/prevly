@@ -320,7 +320,79 @@ public sealed class SocialSecurityRegistrationService(
         return reportItems;
     }
 
+    public async Task<IReadOnlyCollection<SocialSecurityRegistrationEntity>> GetForExportAsync(
+        string? query,
+        SocialSecurityRegistrationStatus? status,
+        IReadOnlyCollection<string>? registrationIds
+    )
+    {
+        var filterBuilder = Builders<SocialSecurityRegistrationEntity>.Filter;
+        var filters = new List<FilterDefinition<SocialSecurityRegistrationEntity>>();
+
+        var selectedIds = registrationIds?
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .Select(x => x.Trim())
+            .Distinct()
+            .ToList() ?? [];
+
+        if (selectedIds.Count > 0)
+        {
+            filters.Add(filterBuilder.In(registration => registration.Id, selectedIds));
+        }
+        else
+        {
+            if (!string.IsNullOrWhiteSpace(query))
+            {
+                var pattern = new BsonRegularExpression(Regex.Escape(query.Trim()), "i");
+                filters.Add(filterBuilder.Or(
+                    filterBuilder.Regex(registration => registration.Number, pattern),
+                    filterBuilder.Regex(registration => registration.OwnershipOwnerName, pattern)
+                ));
+            }
+
+            if (status.HasValue)
+            {
+                filters.Add(filterBuilder.Eq(registration => registration.Status, status.Value));
+            }
+        }
+
+        var filter = filters.Count > 0
+            ? filterBuilder.And(filters)
+            : filterBuilder.Empty;
+
+        return await GetAllByFilterAsync(filter);
+    }
+
     #region Private methods
+
+    private async Task<IReadOnlyCollection<SocialSecurityRegistrationEntity>> GetAllByFilterAsync(
+        FilterDefinition<SocialSecurityRegistrationEntity> filter
+    )
+    {
+        const int pageSize = 500;
+        var pageNumber = 1;
+        var all = new List<SocialSecurityRegistrationEntity>();
+
+        while (true)
+        {
+            var page = await socialSecurityRegistrationRepository.GetPaginatedAsync(
+                filter,
+                new PaginationParameters { PageNumber = pageNumber, PageSize = pageSize }
+            );
+
+            if (page.Data.Count == 0)
+                break;
+
+            all.AddRange(page.Data);
+
+            if (all.Count >= page.TotalRecords)
+                break;
+
+            pageNumber++;
+        }
+
+        return all;
+    }
 
     private async Task<ImportSocialSecurityRegistrationsResultDto> SaveUniqueValidNitsAsync(
         IReadOnlyCollection<string> candidates,
@@ -348,8 +420,8 @@ public sealed class SocialSecurityRegistrationService(
                 Number = number,
                 PersonId = personId,
                 CreatedAt = DateTime.UtcNow,
-                FirstContributionDate = DateTime.MinValue,
-                LastContributionDate = DateTime.MinValue,
+                FirstContributionDate = null,
+                LastContributionDate = null,
                 ContributionYears = 0,
                 Status = SocialSecurityRegistrationStatus.PendingOwnershipCheck,
                 LastProcessingError = null,

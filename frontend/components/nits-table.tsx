@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -56,6 +56,7 @@ interface NitsTableProps {
   data: SocialSecurityRegistration[];
   personNamesById: Record<string, string>;
   onBindPerson: (registration: SocialSecurityRegistration) => void;
+  onSelectionChange?: (selected: SocialSecurityRegistration[]) => void;
 }
 
 function StatusBadge({ status }: { status?: number }) {
@@ -120,6 +121,7 @@ export function NitsTable({
   data,
   personNamesById,
   onBindPerson,
+  onSelectionChange,
 }: NitsTableProps) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
@@ -296,6 +298,18 @@ export function NitsTable({
     enableRowSelection: true,
     state: { sorting, rowSelection },
   });
+
+  useEffect(() => {
+    if (!onSelectionChange) return;
+    const selected = Object.entries(rowSelection)
+      .filter(([, isSelected]) => isSelected)
+      .map(([rowId]) => data[Number(rowId)])
+      .filter(
+        (registration): registration is SocialSecurityRegistration =>
+          Boolean(registration),
+      );
+    onSelectionChange(selected);
+  }, [onSelectionChange, rowSelection, data]);
 
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-card">
