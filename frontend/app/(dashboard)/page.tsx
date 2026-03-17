@@ -4,6 +4,7 @@ import Link from "next/link";
 import { AlertCircle, ArrowRight, CheckCircle, Clock, FileText, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   getApiPersonResponseSuccess,
   useGetApiPerson,
@@ -73,6 +74,7 @@ export default function DashboardPage() {
 
   const recentPersons = persons.slice(0, 5);
   const recentNits = nits.slice(0, 5);
+  const dashboardLoading = personsQuery.isLoading || nitsQuery.isLoading;
 
   return (
     <div className="flex flex-col gap-8">
@@ -82,19 +84,31 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((stat) => (
-          <Card key={stat.title} className="relative overflow-hidden">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
-              <stat.icon className={`h-4 w-4 ${stat.color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">{stat.value}</div>
-              <p className="mt-1 text-xs text-muted-foreground">{stat.description}</p>
-              <Link href={stat.href} className="absolute inset-0" aria-label={`Ver ${stat.title.toLowerCase()}`} />
-            </CardContent>
-          </Card>
-        ))}
+        {dashboardLoading
+          ? Array.from({ length: 4 }).map((_, index) => (
+              <Card key={`stats-skeleton-${index}`} className="overflow-hidden">
+                <CardHeader className="pb-2">
+                  <Skeleton className="h-4 w-28" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-8 w-16" />
+                  <Skeleton className="mt-2 h-3 w-24" />
+                </CardContent>
+              </Card>
+            ))
+          : stats.map((stat) => (
+              <Card key={stat.title} className="relative overflow-hidden">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">{stat.title}</CardTitle>
+                  <stat.icon className={`h-4 w-4 ${stat.color}`} />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-foreground">{stat.value}</div>
+                  <p className="mt-1 text-xs text-muted-foreground">{stat.description}</p>
+                  <Link href={stat.href} className="absolute inset-0" aria-label={`Ver ${stat.title.toLowerCase()}`} />
+                </CardContent>
+              </Card>
+            ))}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
@@ -109,7 +123,15 @@ export default function DashboardPage() {
             </Button>
           </CardHeader>
           <CardContent>
-            {recentPersons.length ? (
+            {dashboardLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ) : recentPersons.length ? (
               <div className="space-y-3">
                 {recentPersons.map((person) => (
                   <div key={person.id} className="flex items-center justify-between border-b border-border py-2 last:border-0">
@@ -143,7 +165,15 @@ export default function DashboardPage() {
             </Button>
           </CardHeader>
           <CardContent>
-            {recentNits.length ? (
+            {dashboardLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ) : recentNits.length ? (
               <div className="space-y-3">
                 {recentNits.map((nit) => (
                   <div key={nit.id} className="flex items-center justify-between border-b border-border py-2 last:border-0">

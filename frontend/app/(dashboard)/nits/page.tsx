@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { Download, Filter, Plus, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Dialog,
   DialogContent,
@@ -27,7 +28,10 @@ import {
   useGetApiSocialSecurityRegistration,
   usePostApiSocialSecurityRegistrationBindPerson,
 } from "@/lib/api/generated/social-security-registration/social-security-registration";
-import { getApiPersonResponseSuccess, useGetApiPerson } from "@/lib/api/generated/person/person";
+import {
+  getApiPersonResponseSuccess,
+  useGetApiPerson,
+} from "@/lib/api/generated/person/person";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -37,13 +41,22 @@ export default function NitsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [importOpen, setImportOpen] = useState(false);
 
-  const nitsQuery = useGetApiSocialSecurityRegistration({ PageNumber: 1, PageSize: 500 });
+  const nitsQuery = useGetApiSocialSecurityRegistration({
+    PageNumber: 1,
+    PageSize: 500,
+  });
   const personsQuery = useGetApiPerson({ PageNumber: 1, PageSize: 500 });
   const bindPersonMutation = usePostApiSocialSecurityRegistrationBindPerson();
 
   const nits =
-    (nitsQuery.data as getApiSocialSecurityRegistrationResponseSuccess | undefined)?.data.data ?? [];
-  const persons = (personsQuery.data as getApiPersonResponseSuccess | undefined)?.data.data ?? [];
+    (
+      nitsQuery.data as
+        | getApiSocialSecurityRegistrationResponseSuccess
+        | undefined
+    )?.data.data ?? [];
+  const persons =
+    (personsQuery.data as getApiPersonResponseSuccess | undefined)?.data.data ??
+    [];
 
   const personNamesById = useMemo(
     () =>
@@ -62,7 +75,8 @@ export default function NitsPage() {
         const matchesSearch =
           (nit.number ?? "").toLowerCase().includes(query) ||
           (nit.ownershipOwnerName ?? "").toLowerCase().includes(query);
-        const matchesStatus = statusFilter === "all" || `${nit.status}` === statusFilter;
+        const matchesStatus =
+          statusFilter === "all" || `${nit.status}` === statusFilter;
         return matchesSearch && matchesStatus;
       }),
     [nits, searchQuery, statusFilter],
@@ -70,7 +84,9 @@ export default function NitsPage() {
 
   const onBindPerson = async (registrationId?: string | null) => {
     if (!registrationId) return;
-    const personId = window.prompt("Informe o ID da pessoa para vincular este NIT:");
+    const personId = window.prompt(
+      "Informe o ID da pessoa para vincular este NIT:",
+    );
     if (!personId) return;
 
     try {
@@ -82,7 +98,9 @@ export default function NitsPage() {
       });
       toast.success("NIT vinculado com sucesso.");
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao vincular NIT.");
+      toast.error(
+        error instanceof Error ? error.message : "Erro ao vincular NIT.",
+      );
     }
   };
 
@@ -92,8 +110,12 @@ export default function NitsPage() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">NITs</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Gerencie os registros de NIT.</p>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">
+            NITs
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Gerencie os registros de NIT.
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" className="gap-2" disabled>
@@ -162,12 +184,41 @@ export default function NitsPage() {
       </div>
 
       <div className="text-sm text-muted-foreground">
-        {filteredNits.length} {filteredNits.length === 1 ? "registro encontrado" : "registros encontrados"}
+        {filteredNits.length}{" "}
+        {filteredNits.length === 1
+          ? "registro encontrado"
+          : "registros encontrados"}
       </div>
 
       {nitsQuery.isLoading ? (
-        <div className="rounded-lg border border-border bg-card p-8 text-sm text-muted-foreground">
-          Carregando NITs...
+        <div className="rounded-lg border border-border bg-card p-4">
+          <div className="space-y-3">
+            <div className="grid grid-cols-[40px_1fr_1fr_1fr_1fr_1fr_1fr_1fr] gap-3">
+              <Skeleton className="h-5 w-5 rounded-sm" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-4 w-24" />
+            </div>
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div
+                key={`nits-grid-skeleton-${index}`}
+                className="grid grid-cols-[40px_1fr_1fr_1fr_1fr_1fr_1fr_1fr] items-center gap-3"
+              >
+                <Skeleton className="h-5 w-5 rounded-sm" />
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-5 w-32" />
+                <Skeleton className="h-5 w-32" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : nitsQuery.isError ? (
         <div className="rounded-lg border border-red-200 bg-red-50 p-8 text-sm text-red-700">
