@@ -4,6 +4,7 @@
     "Prevly.WorkerService": {
       "commandName": "Project",
       "dotnetRunMessages": true,
+      "commandLineArgs": "YahooEmailMonitoringWorker",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
       }

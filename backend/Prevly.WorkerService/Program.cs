@@ -7,6 +7,10 @@ using Prevly.Application.SocialSecurityRegistration.Services;
 using Prevly.Domain.Interfaces;
 using Prevly.Infrastructure;
 using Provly.Shared.Settings;
+using Prevly.WorkerService.Interfaces;
+using Prevly.WorkerService.Models;
+using Prevly.WorkerService.Persistence;
+using Prevly.WorkerService.Services;
 using Prevly.WorkerService.Workers;
 
 var builder = Host.CreateApplicationBuilder(args);
@@ -35,6 +39,33 @@ builder.Services.AddScoped<ISocialSecurityRegistrationService, SocialSecurityReg
 builder.Services.AddScoped<NitOwnershipChecker>();
 builder.Services.AddScoped<INitOwnershipChecker>(sp => sp.GetRequiredService<NitOwnershipChecker>());
 builder.Services.AddHostedService<NitOwnershipCheckWorker>();
+
+builder.Services
+    .AddOptions<YahooMailMonitoringOptions>()
+    .Bind(builder.Configuration.GetSection(YahooMailMonitoringOptions.SectionName))
+    .ValidateDataAnnotations()
+    .Validate(
+        options => !string.IsNullOrWhiteSpace(options.Password) && !string.IsNullOrWhiteSpace(options.Username),
+        "YahooMailMonitoring username/password sao obrigatorios."
+    )
+    .ValidateOnStart();
+
+builder.Services.AddSingleton<IEmailReaderService, YahooImapEmailReaderService>();
+builder.Services.AddSingleton<IProcessedEmailStore, FileProcessedEmailStore>();
+builder.Services.AddSingleton<IEmailMessageProcessor, LoggingEmailMessageProcessor>();
+builder.Services.AddHostedService<YahooEmailMonitoringWorker>();
+
+// workers ----------------------------------------------------------------------------------------------------------------
+switch (args[0])
+{
+    case "NitOwnershipCheckWorker":
+        builder.Services.AddHostedService<NitOwnershipCheckWorker>();
+        break;    
+    
+    case "YahooEmailMonitoringWorker":
+        builder.Services.AddHostedService<YahooEmailMonitoringWorker>();
+        break;
+}
 
 var host = builder.Build();
 host.Run();
