@@ -24,5 +24,9 @@ export interface Person {
   nitId?: string | null;
   /** @nullable */
   birthDate?: string | null;
+  /** @nullable */
+  retirementRequestStatus?: number | null;
+  /** @nullable */
+  retirementRequestStatusUpdatedAt?: string | null;
   createdAt?: string;
 }

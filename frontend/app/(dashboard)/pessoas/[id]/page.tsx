@@ -21,14 +21,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  getApiPersonIdResponseSuccess,
   getGetApiPersonIdQueryKey,
   getGetApiPersonQueryKey,
   putApiPersonIdResponseSuccess,
   useDeleteApiPersonId,
-  useGetApiPersonId,
   usePutApiPersonId,
 } from "@/lib/api/generated/person/person";
+import type { Person } from "@/lib/api/generated/model";
 import {
   getApiNitResponseSuccess,
   getGetApiNitQueryKey,
@@ -36,13 +35,42 @@ import {
   useGetApiNit,
   usePostApiNitBindPerson,
 } from "@/lib/api/generated/nit/nit";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { customFetch } from "@/lib/api/http-client";
+import { cn } from "@/lib/utils";
+import {
+  getRetirementRequestStatusLabel,
+  getRetirementRequestStatusStyle,
+} from "@/lib/person-retirement-status";
 import { toast } from "sonner";
 
 interface FormErrors {
   name?: string;
   cpf?: string;
 }
+
+interface MonitoredEmailDto {
+  id?: string | null;
+  personId: string;
+  subject?: string | null;
+  from?: string | null;
+  rawContent?: string | null;
+  summary?: string | null;
+  receivedAt: string;
+  identifiedStatus?: number | null;
+  identifiedStatusLabel?: string | null;
+  extractedName?: string | null;
+  extractedCpf?: string | null;
+  messageUniqueId?: string | null;
+  createdAt: string;
+}
+
+interface PersonDetailsDto {
+  person: Person;
+  monitoredEmails: MonitoredEmailDto[];
+}
+
+const getPersonDetailsQueryKey = (personId: string) => ["person-details", personId] as const;
 
 const formatCpf = (value: string) => {
   const digits = value.replace(/\D/g, "").slice(0, 11);
@@ -68,12 +96,26 @@ const toDateInputValue = (value?: string | null) => {
   return /^\d{4}-\d{2}-\d{2}$/.test(normalized) ? normalized : "";
 };
 
+const formatDateTime = (value?: string | null) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return date.toLocaleString("pt-BR");
+};
+
 export default function PessoaDetalhePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const personQuery = useGetApiPersonId(params.id);
+  const personDetailsQuery = useQuery({
+    queryKey: getPersonDetailsQueryKey(params.id),
+    queryFn: async () => {
+      const response = await customFetch<{ data: PersonDetailsDto }>(`/api/Person/${params.id}/details`);
+      return response.data;
+    },
+  });
+
   const updateMutation = usePutApiPersonId();
   const deleteMutation = useDeleteApiPersonId();
   const bindPersonMutation = usePostApiNitBindPerson();
@@ -94,10 +136,8 @@ export default function PessoaDetalhePage() {
     birthDate: "",
   });
 
-  const personResponse = personQuery.data as
-    | getApiPersonIdResponseSuccess
-    | undefined;
-  const person = personResponse?.data;
+  const person = personDetailsQuery.data?.person;
+  const monitoredEmails = personDetailsQuery.data?.monitoredEmails ?? [];
 
   useEffect(() => {
     if (!person) return;
@@ -194,6 +234,7 @@ export default function PessoaDetalhePage() {
           queryKey: getGetApiPersonIdQueryKey(params.id),
         }),
         queryClient.invalidateQueries({ queryKey: getGetApiNitQueryKey() }),
+        queryClient.invalidateQueries({ queryKey: getPersonDetailsQueryKey(params.id) }),
       ]);
 
       setIsEditing(false);
@@ -220,7 +261,7 @@ export default function PessoaDetalhePage() {
     }
   };
 
-  if (personQuery.isLoading) {
+  if (personDetailsQuery.isLoading) {
     return (
       <div className="flex flex-col gap-6">
         <div className="space-y-2">
@@ -244,7 +285,7 @@ export default function PessoaDetalhePage() {
     );
   }
 
-  if (personQuery.isError || !person) {
+  if (personDetailsQuery.isError || !person) {
     return (
       <div className="space-y-4">
         <h1 className="text-2xl font-semibold">Pessoa não encontrada</h1>
@@ -255,6 +296,7 @@ export default function PessoaDetalhePage() {
     );
   }
 
+  const personStatusStyle = getRetirementRequestStatusStyle(person.retirementRequestStatus);
   const isSaving = updateMutation.isPending || bindPersonMutation.isPending;
 
   return (
@@ -272,6 +314,16 @@ export default function PessoaDetalhePage() {
             {person.name}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">CPF {person.cpf}</p>
+          <span
+            className={cn(
+              "mt-3 inline-flex items-center gap-2 rounded-full px-2 py-1 text-xs font-medium",
+              personStatusStyle.bg,
+              personStatusStyle.text,
+            )}
+          >
+            <span className={cn("h-1.5 w-1.5 rounded-full", personStatusStyle.dot)} />
+            {getRetirementRequestStatusLabel(person.retirementRequestStatus)}
+          </span>
         </div>
         <div className="flex items-center gap-2">
           {!isEditing && (
@@ -430,6 +482,64 @@ export default function PessoaDetalhePage() {
             </div>
           )}
         </form>
+      </section>
+
+      <section className="rounded-lg border border-border bg-card p-6">
+        <h2 className="text-base font-semibold text-foreground">Histórico de e-mails monitorados</h2>
+        <div className="my-4 h-px w-full bg-border" />
+
+        {!monitoredEmails.length ? (
+          <p className="text-sm text-muted-foreground">Nenhum e-mail monitorado para esta pessoa.</p>
+        ) : (
+          <div className="space-y-4">
+            {monitoredEmails.map((email) => {
+              const emailStatusStyle = getRetirementRequestStatusStyle(email.identifiedStatus);
+
+              return (
+                <article
+                  key={email.id ?? `${email.messageUniqueId}-${email.receivedAt}`}
+                  className="rounded-lg border border-border bg-background p-4"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <h3 className="text-sm font-semibold text-foreground">{email.subject || "(sem assunto)"}</h3>
+                    <span className="text-xs text-muted-foreground">{formatDateTime(email.receivedAt)}</span>
+                  </div>
+
+                  <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                    <span><strong>Remetente:</strong> {email.from || "-"}</span>
+                    <span
+                      className={cn(
+                        "inline-flex items-center gap-2 rounded-full px-2 py-1 font-medium",
+                        emailStatusStyle.bg,
+                        emailStatusStyle.text,
+                      )}
+                    >
+                      <span className={cn("h-1.5 w-1.5 rounded-full", emailStatusStyle.dot)} />
+                      {email.identifiedStatusLabel || getRetirementRequestStatusLabel(email.identifiedStatus)}
+                    </span>
+                  </div>
+
+                  <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
+                    <p><strong>Nome extraído:</strong> {email.extractedName || "-"}</p>
+                    <p><strong>CPF extraído:</strong> {email.extractedCpf || "-"}</p>
+                  </div>
+
+                  <div className="mt-3 rounded-md border border-border bg-card p-3">
+                    <p className="text-xs font-medium text-foreground">Resumo</p>
+                    <p className="mt-1 text-sm text-muted-foreground">{email.summary || "-"}</p>
+                  </div>
+
+                  <div className="mt-3 rounded-md border border-border bg-card p-3">
+                    <p className="text-xs font-medium text-foreground">Conteúdo completo</p>
+                    <pre className="mt-1 max-h-56 overflow-auto whitespace-pre-wrap text-xs text-muted-foreground">
+                      {email.rawContent || "-"}
+                    </pre>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
       </section>
     </div>
   );

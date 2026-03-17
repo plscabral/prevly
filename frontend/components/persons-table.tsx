@@ -26,6 +26,11 @@ import {
 } from "@/components/ui/table";
 import { Person } from "@/lib/api/generated/model";
 import { toast } from "sonner";
+import {
+  getRetirementRequestStatusLabel,
+  getRetirementRequestStatusStyle,
+} from "@/lib/person-retirement-status";
+import { cn } from "@/lib/utils";
 
 interface PersonsTableProps {
   data: Person[];
@@ -149,6 +154,26 @@ export function PersonsTable({ data, onSelectionChange }: PersonsTableProps) {
       cell: ({ row }) => (
         <span className="text-sm text-muted-foreground">{row.original.cpf ?? "-"}</span>
       ),
+    },
+    {
+      id: "retirementRequestStatus",
+      header: "Status monitorado",
+      cell: ({ row }) => {
+        const status = row.original.retirementRequestStatus;
+        const style = getRetirementRequestStatusStyle(status);
+        return (
+          <span
+            className={cn(
+              "inline-flex items-center gap-2 rounded-full px-2 py-1 text-xs font-medium",
+              style.bg,
+              style.text,
+            )}
+          >
+            <span className={cn("h-1.5 w-1.5 rounded-full", style.dot)} />
+            {getRetirementRequestStatusLabel(status)}
+          </span>
+        );
+      },
     },
     {
       accessorKey: "govPassword",

@@ -176,11 +176,12 @@ export default function PessoasPage() {
       {personsQuery.isLoading || forceRefreshing ? (
         <div className="rounded-lg border border-border bg-card p-4">
           <div className="space-y-3">
-            <div className="grid grid-cols-[40px_40px_1.4fr_1fr_1.3fr_1fr_1fr_0.9fr] gap-3">
+            <div className="grid grid-cols-[40px_40px_1.4fr_1fr_1.5fr_1.3fr_1fr_1fr_0.9fr] gap-3">
               <Skeleton className="h-5 w-5 rounded-sm" />
               <Skeleton className="h-5 w-5 rounded-sm" />
               <Skeleton className="h-4 w-24" />
               <Skeleton className="h-4 w-16" />
+              <Skeleton className="h-4 w-28" />
               <Skeleton className="h-4 w-20" />
               <Skeleton className="h-4 w-16" />
               <Skeleton className="h-4 w-20" />
@@ -189,12 +190,13 @@ export default function PessoasPage() {
             {Array.from({ length: 5 }).map((_, index) => (
               <div
                 key={`persons-grid-skeleton-${index}`}
-                className="grid grid-cols-[40px_40px_1.4fr_1fr_1.3fr_1fr_1fr_0.9fr] items-center gap-3"
+                className="grid grid-cols-[40px_40px_1.4fr_1fr_1.5fr_1.3fr_1fr_1fr_0.9fr] items-center gap-3"
               >
                 <Skeleton className="h-5 w-5 rounded-sm" />
                 <Skeleton className="h-8 w-8 rounded-md" />
                 <Skeleton className="h-5 w-[85%]" />
                 <Skeleton className="h-5 w-[75%]" />
+                <Skeleton className="h-5 w-[70%]" />
                 <Skeleton className="h-5 w-[90%]" />
                 <Skeleton className="h-5 w-[80%]" />
                 <Skeleton className="h-5 w-[80%]" />
