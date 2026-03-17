@@ -5,5 +5,7 @@ public sealed record EmailMessageInfo(
     string MessageId,
     string Subject,
     string From,
-    DateTimeOffset ReceivedAt
+    DateTimeOffset ReceivedAt,
+    string RawContent,
+    string? Summary
 );

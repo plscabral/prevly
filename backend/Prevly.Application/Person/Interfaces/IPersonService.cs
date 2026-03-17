@@ -7,6 +7,7 @@ public interface IPersonService
 {
     Task<PagedResult<Domain.Entities.Person>> GetPaginatedAsync(FilterPersonDto dto);
     Task<IReadOnlyCollection<Domain.Entities.Person>> GetForExportAsync(string? query, IReadOnlyCollection<string>? personIds);
+    Task<PersonDetailsDto?> GetDetailsAsync(string id);
     Task<Domain.Entities.Person?> GetByIdAsync(string id);
     Task<Domain.Entities.Person> CreateAsync(CreatePersonDto dto);
     Task<Domain.Entities.Person?> UpdateAsync(string id, UpdatePersonDto dto);

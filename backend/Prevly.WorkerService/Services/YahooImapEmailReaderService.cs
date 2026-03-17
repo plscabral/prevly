@@ -4,6 +4,7 @@ using MailKit.Search;
 using Microsoft.Extensions.Options;
 using Prevly.WorkerService.Interfaces;
 using Prevly.WorkerService.Models;
+using System.Text;
 
 namespace Prevly.WorkerService.Services;
 
@@ -30,16 +31,26 @@ public sealed class YahooImapEmailReaderService(
         var inbox = client.Inbox;
         await inbox.OpenAsync(FolderAccess.ReadOnly, cancellationToken);
 
-        // Busca completa + filtro exato do remetente para garantir igualdade com TargetSender.
-        var allUids = await inbox.SearchAsync(SearchQuery.NotDeleted, cancellationToken);
+        var lookbackDate = DateTime.UtcNow.AddDays(-Math.Max(1, _options.LookbackDays));
+        var searchQuery = SearchQuery.NotDeleted
+            .And(SearchQuery.DeliveredAfter(lookbackDate))
+            .And(SearchQuery.FromContains(_options.TargetSender));
+
+        var allUids = await inbox.SearchAsync(searchQuery, cancellationToken);
         if (allUids.Count == 0)
         {
             await client.DisconnectAsync(true, cancellationToken);
             return [];
         }
 
+        var selectedUids = allUids
+            .OrderByDescending(x => x.Id)
+            .Take(Math.Max(1, _options.MaxMessagesPerCycle))
+            .OrderBy(x => x.Id)
+            .ToList();
+
         var summaries = await inbox.FetchAsync(
-            allUids,
+            selectedUids,
             MessageSummaryItems.UniqueId | MessageSummaryItems.Envelope | MessageSummaryItems.InternalDate,
             cancellationToken
         );
@@ -66,25 +77,61 @@ public sealed class YahooImapEmailReaderService(
                 ? "(sem assunto)"
                 : summary.Envelope.Subject.Trim();
 
+            var mimeMessage = await inbox.GetMessageAsync(summary.UniqueId, cancellationToken);
+            var rawContent = BuildRawContent(mimeMessage.TextBody, mimeMessage.HtmlBody);
+
             result.Add(new EmailMessageInfo(
                 UniqueKey: uniqueKey,
                 MessageId: messageId,
                 Subject: subject,
                 From: fromAddress.Trim(),
-                ReceivedAt: receivedAt
+                ReceivedAt: receivedAt,
+                RawContent: rawContent,
+                Summary: Summarize(rawContent)
             ));
         }
 
         await client.DisconnectAsync(true, cancellationToken);
 
         logger.LogDebug(
-            "Leitura IMAP concluida. TotalMessages={TotalMessages} TargetSenderMessages={TargetSenderMessages}",
-            summaries.Count,
+            "Leitura IMAP concluida. MatchedMessages={MatchedMessages} LoadedMessages={LoadedMessages}",
+            allUids.Count,
             result.Count
         );
 
         return result
             .OrderBy(x => x.ReceivedAt)
             .ToList();
+    }
+
+    private static string BuildRawContent(string? textBody, string? htmlBody)
+    {
+        var sb = new StringBuilder();
+        if (!string.IsNullOrWhiteSpace(textBody))
+            sb.AppendLine(textBody);
+
+        if (!string.IsNullOrWhiteSpace(htmlBody))
+            sb.AppendLine(htmlBody);
+
+        return sb.ToString().Trim();
+    }
+
+    private static string? Summarize(string rawContent)
+    {
+        if (string.IsNullOrWhiteSpace(rawContent))
+            return null;
+
+        var compact = string.Join(
+            " ",
+            rawContent
+                .Replace("\r", " ")
+                .Replace("\n", " ")
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries)
+        );
+
+        if (compact.Length <= 280)
+            return compact;
+
+        return compact[..280] + "...";
     }
 }

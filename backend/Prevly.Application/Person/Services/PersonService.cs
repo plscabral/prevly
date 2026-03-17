@@ -8,7 +8,10 @@ using Provly.Shared.Pagination;
 
 namespace Prevly.Application.Person.Services;
 
-public sealed class PersonService(IPersonRepository personRepository) : IPersonService
+public sealed class PersonService(
+    IPersonRepository personRepository,
+    IMonitoredEmailRepository monitoredEmailRepository
+) : IPersonService
 {
     public Task<PagedResult<Domain.Entities.Person>> GetPaginatedAsync(FilterPersonDto parameters)
     {
@@ -34,6 +37,40 @@ public sealed class PersonService(IPersonRepository personRepository) : IPersonS
     }
 
     public Task<Domain.Entities.Person?> GetByIdAsync(string id) => personRepository.GetByIdAsync(id);
+
+    public async Task<PersonDetailsDto?> GetDetailsAsync(string id)
+    {
+        var person = await personRepository.GetByIdAsync(id);
+        if (person is null)
+            return null;
+
+        var monitoredEmails = await monitoredEmailRepository.GetByPersonIdAsync(id);
+        var mappedEmails = monitoredEmails
+            .OrderByDescending(x => x.ReceivedAt)
+            .Select(x => new MonitoredEmailDto
+            {
+                Id = x.Id,
+                PersonId = x.PersonId,
+                Subject = x.Subject,
+                From = x.From,
+                RawContent = x.RawContent,
+                Summary = x.Summary,
+                ReceivedAt = x.ReceivedAt,
+                IdentifiedStatus = x.IdentifiedStatus,
+                IdentifiedStatusLabel = RetirementRequestStatusLabelMapper.ToPtBrLabel(x.IdentifiedStatus),
+                ExtractedName = x.ExtractedName,
+                ExtractedCpf = x.ExtractedCpf,
+                MessageUniqueId = x.MessageUniqueId,
+                CreatedAt = x.CreatedAt
+            })
+            .ToList();
+
+        return new PersonDetailsDto
+        {
+            Person = person,
+            MonitoredEmails = mappedEmails
+        };
+    }
 
     public async Task<IReadOnlyCollection<Domain.Entities.Person>> GetForExportAsync(
         string? query,

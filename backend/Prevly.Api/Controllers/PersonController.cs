@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using ClosedXML.Excel;
 using Prevly.Application.Person.Interfaces;
+using Prevly.Application.Person.Services;
 using Prevly.Application.Services.DTOs.Person;
 using Prevly.Domain.Entities;
 using Provly.Shared.Pagination;
@@ -45,6 +46,25 @@ public class PersonController(
             var person = await personService.GetByIdAsync(id);
 
             return person is null ? NotFound() : Ok(person);
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, e.Message);
+            return StatusCode(400, e.Message);
+        }
+    }
+
+    [HttpGet("{id}/details")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<PersonDetailsDto>> GetDetails([FromRoute] string id)
+    {
+        try
+        {
+            var details = await personService.GetDetailsAsync(id);
+            return details is null ? NotFound() : Ok(details);
         }
         catch (Exception e)
         {
@@ -125,7 +145,7 @@ public class PersonController(
             using var workbook = new XLWorkbook();
             var worksheet = workbook.Worksheets.Add("Pessoas");
 
-            var headers = new[] { "Nome", "CPF", "WhatsApp", "NIT Vinculado", "Criado em" };
+            var headers = new[] { "Nome", "CPF", "Status do pedido", "WhatsApp", "NIT Vinculado", "Criado em" };
             for (var col = 0; col < headers.Length; col++)
             {
                 worksheet.Cell(1, col + 1).Value = headers[col];
@@ -136,9 +156,10 @@ public class PersonController(
             {
                 worksheet.Cell(rowIndex, 1).Value = ValueOrDash(person.Name);
                 worksheet.Cell(rowIndex, 2).Value = ValueOrDash(person.Cpf);
-                worksheet.Cell(rowIndex, 3).Value = ValueOrDash(person.WhatsApp);
-                worksheet.Cell(rowIndex, 4).Value = ValueOrDash(person.NitId);
-                worksheet.Cell(rowIndex, 5).Value = person.CreatedAt == default
+                worksheet.Cell(rowIndex, 3).Value = RetirementRequestStatusLabelMapper.ToPtBrLabel(person.RetirementRequestStatus);
+                worksheet.Cell(rowIndex, 4).Value = ValueOrDash(person.WhatsApp);
+                worksheet.Cell(rowIndex, 5).Value = ValueOrDash(person.NitId);
+                worksheet.Cell(rowIndex, 6).Value = person.CreatedAt == default
                     ? "-"
                     : person.CreatedAt.ToString("dd/MM/yyyy HH:mm");
                 rowIndex++;
@@ -161,9 +182,10 @@ public class PersonController(
             worksheet.Columns().AdjustToContents();
             worksheet.Column(1).Width = Math.Max(worksheet.Column(1).Width, 28);
             worksheet.Column(2).Width = Math.Max(worksheet.Column(2).Width, 18);
-            worksheet.Column(3).Width = Math.Max(worksheet.Column(3).Width, 18);
-            worksheet.Column(4).Width = Math.Max(worksheet.Column(4).Width, 20);
-            worksheet.Column(5).Width = Math.Max(worksheet.Column(5).Width, 18);
+            worksheet.Column(3).Width = Math.Max(worksheet.Column(3).Width, 34);
+            worksheet.Column(4).Width = Math.Max(worksheet.Column(4).Width, 18);
+            worksheet.Column(5).Width = Math.Max(worksheet.Column(5).Width, 20);
+            worksheet.Column(6).Width = Math.Max(worksheet.Column(6).Width, 18);
 
             using var stream = new MemoryStream();
             workbook.SaveAs(stream);

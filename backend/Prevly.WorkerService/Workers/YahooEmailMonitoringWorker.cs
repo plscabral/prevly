@@ -8,8 +8,7 @@ namespace Prevly.WorkerService.Workers;
 
 public sealed class YahooEmailMonitoringWorker(
     IEmailReaderService emailReaderService,
-    IProcessedEmailStore processedEmailStore,
-    IEmailMessageProcessor emailMessageProcessor,
+    IServiceScopeFactory scopeFactory,
     IOptions<YahooMailMonitoringOptions> options,
     ILogger<YahooEmailMonitoringWorker> logger
 ) : BackgroundService
@@ -99,28 +98,21 @@ public sealed class YahooEmailMonitoringWorker(
         }
 
         var processedNow = 0;
-        var alreadyProcessed = 0;
+
+        await using var scope = scopeFactory.CreateAsyncScope();
+        var emailMessageProcessor = scope.ServiceProvider.GetRequiredService<IEmailMessageProcessor>();
 
         foreach (var message in messages)
         {
             cancellationToken.ThrowIfCancellationRequested();
-
-            if (await processedEmailStore.IsProcessedAsync(message.UniqueKey, cancellationToken))
-            {
-                alreadyProcessed++;
-                continue;
-            }
-
             await emailMessageProcessor.ProcessAsync(message, cancellationToken);
-            await processedEmailStore.MarkAsProcessedAsync(message.UniqueKey, cancellationToken);
             processedNow++;
         }
 
         logger.LogInformation(
-            "Ciclo de e-mail concluido. TargetMessages={Total} ProcessedNow={ProcessedNow} AlreadyProcessed={AlreadyProcessed}",
+            "Ciclo de e-mail concluido. TargetMessages={Total} ProcessedNow={ProcessedNow}",
             messages.Count,
-            processedNow,
-            alreadyProcessed
+            processedNow
         );
     }
 

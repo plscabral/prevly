@@ -34,6 +34,9 @@ public sealed class YahooMailMonitoringOptions
     [Range(1, 60)]
     public int RetryBaseDelaySeconds { get; set; } = 5;
 
-    [Required]
-    public string ProcessedStoreFilePath { get; set; } = "data/processed-emails.json";
+    [Range(1, 90)]
+    public int LookbackDays { get; set; } = 15;
+
+    [Range(1, 500)]
+    public int MaxMessagesPerCycle { get; set; } = 80;
 }

@@ -9,7 +9,6 @@ using Prevly.Infrastructure;
 using Provly.Shared.Settings;
 using Prevly.WorkerService.Interfaces;
 using Prevly.WorkerService.Models;
-using Prevly.WorkerService.Persistence;
 using Prevly.WorkerService.Services;
 using Prevly.WorkerService.Workers;
 
@@ -33,12 +32,12 @@ builder.Services.AddSingleton<IMongoDatabase>(sp =>
 
 // repositories
 builder.Services.AddScoped<IPersonRepository, PersonRepository>();
+builder.Services.AddScoped<IMonitoredEmailRepository, MonitoredEmailRepository>();
 builder.Services.AddScoped<INitRepository, NitRepository>();
 builder.Services.AddScoped<INitService, NitService>();
 
 builder.Services.AddScoped<NitOwnershipChecker>();
 builder.Services.AddScoped<INitOwnershipChecker>(sp => sp.GetRequiredService<NitOwnershipChecker>());
-builder.Services.AddHostedService<NitOwnershipCheckWorker>();
 
 builder.Services
     .AddOptions<YahooMailMonitoringOptions>()
@@ -51,18 +50,25 @@ builder.Services
     .ValidateOnStart();
 
 builder.Services.AddSingleton<IEmailReaderService, YahooImapEmailReaderService>();
-builder.Services.AddSingleton<IProcessedEmailStore, FileProcessedEmailStore>();
-builder.Services.AddSingleton<IEmailMessageProcessor, LoggingEmailMessageProcessor>();
-builder.Services.AddHostedService<YahooEmailMonitoringWorker>();
+builder.Services.AddScoped<IEmailContentParserService, EmailContentParserService>();
+builder.Services.AddScoped<IPersonResolverService, PersonResolverService>();
+builder.Services.AddScoped<IMonitoredEmailPersistenceService, MonitoredEmailPersistenceService>();
+builder.Services.AddScoped<IPersonRetirementStatusService, PersonRetirementStatusService>();
+builder.Services.AddScoped<IEmailMessageProcessor, LoggingEmailMessageProcessor>();
 
 // workers ----------------------------------------------------------------------------------------------------------------
-switch (args[0])
+var workerName = args.Length > 0 ? args[0] : "YahooEmailMonitoringWorker";
+switch (workerName)
 {
     case "NitOwnershipCheckWorker":
         builder.Services.AddHostedService<NitOwnershipCheckWorker>();
         break;    
     
     case "YahooEmailMonitoringWorker":
+        builder.Services.AddHostedService<YahooEmailMonitoringWorker>();
+        break;
+
+    default:
         builder.Services.AddHostedService<YahooEmailMonitoringWorker>();
         break;
 }

@@ -89,6 +89,7 @@ builder.Services.AddScoped<NitDetailFlow>();
 // repositories
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<IPersonRepository, PersonRepository>();
+builder.Services.AddScoped<IMonitoredEmailRepository, MonitoredEmailRepository>();
 builder.Services.AddScoped<INitRepository, NitRepository>();
 
 // builder.Services.AddScoped<NitOwnershipChecker>();
