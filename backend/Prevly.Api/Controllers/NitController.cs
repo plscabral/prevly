@@ -120,7 +120,7 @@ public class NitController(
     {
         try
         {
-            var result = await nitService.ProcessPendingOwnershipChecksAsync(cancellationToken);
+            var result = await nitService.ProcessPendingVerificationsAsync(cancellationToken);
             return Ok(result);
         }
         catch (Exception e)
@@ -133,11 +133,11 @@ public class NitController(
     [HttpGet("pending-contribution-calculation")]
     [ProducesResponseType(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<IReadOnlyCollection<PendingContributionNitDto>>> GetPendingContributionCalculation()
+    public async Task<ActionResult<IReadOnlyCollection<PendingContributionNitDto>>> GetPendingPeriodExtraction()
     {
         try
         {
-            var result = await nitService.GetPendingContributionCalculationAsync();
+            var result = await nitService.GetPendingPeriodExtractionAsync();
             return Ok(result);
         }
         catch (Exception e)

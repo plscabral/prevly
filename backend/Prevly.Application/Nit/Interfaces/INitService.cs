@@ -19,8 +19,8 @@ public interface INitService
         IReadOnlyCollection<string> numbers,
         string? personId
     );
-    Task<ProcessOwnershipChecksResultDto> ProcessPendingOwnershipChecksAsync(CancellationToken cancellationToken = default);
-    Task<IReadOnlyCollection<PendingContributionNitDto>> GetPendingContributionCalculationAsync();
+    Task<ProcessOwnershipChecksResultDto> ProcessPendingVerificationsAsync(CancellationToken cancellationToken = default);
+    Task<IReadOnlyCollection<PendingContributionNitDto>> GetPendingPeriodExtractionAsync();
     Task<ContributionDetailsImportResultDto> ImportContributionDetailsFromPdfAsync(
         Stream pdfStream,
         string fileName,

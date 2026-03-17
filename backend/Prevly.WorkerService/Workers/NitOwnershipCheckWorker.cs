@@ -18,14 +18,14 @@ public sealed class NitOwnershipCheckWorker(
                 using var scope = serviceProvider.CreateScope();
                 var service = scope.ServiceProvider.GetRequiredService<INitService>();
 
-                var result = await service.ProcessPendingOwnershipChecksAsync(stoppingToken);
+                var result = await service.ProcessPendingVerificationsAsync(stoppingToken);
                 if (result.Processed > 0 || result.Errors > 0)
                 {
                     logger.LogInformation(
-                        "NitOwnershipCheckWorker processed={Processed} movedToContribution={Moved} rejected={Rejected} errors={Errors}",
+                        "NitOwnershipCheckWorker processed={Processed} movedToPendingPeriodExtraction={Moved} notFound={NotFound} errors={Errors}",
                         result.Processed,
-                        result.MovedToContributionCalculation,
-                        result.RejectedOwnedByAnotherPerson,
+                        result.MovedToPendingPeriodExtraction,
+                        result.NotFound,
                         result.Errors
                     );
                 }

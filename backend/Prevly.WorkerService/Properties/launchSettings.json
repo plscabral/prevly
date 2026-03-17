@@ -4,7 +4,7 @@
     "Prevly.WorkerService": {
       "commandName": "Project",
       "dotnetRunMessages": true,
-      "commandLineArgs": "YahooEmailMonitoringWorker",
+      "commandLineArgs": "NitOwnershipCheckWorker",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
       }

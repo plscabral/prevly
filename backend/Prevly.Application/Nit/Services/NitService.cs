@@ -96,20 +96,20 @@ public sealed class NitService(
         return await SaveUniqueValidNitsAsync(candidates, personId);
     }
 
-    public async Task<ProcessOwnershipChecksResultDto> ProcessPendingOwnershipChecksAsync(
+    public async Task<ProcessOwnershipChecksResultDto> ProcessPendingVerificationsAsync(
         CancellationToken cancellationToken = default
     )
     {
         var processed = 0;
-        var movedToContributionCalculation = 0;
-        var rejectedOwnedByAnotherPerson = 0;
+        var movedToPendingPeriodExtraction = 0;
+        var notFound = 0;
         var errors = 0;
 
         while (!cancellationToken.IsCancellationRequested)
         {
             var pendingFilter = Builders<NitEntity>.Filter.Eq(
                 x => x.Status,
-                NitStatus.PendingOwnershipCheck
+                NitStatus.PendingVerification
             );
 
             var pendingItems = await nitRepository.GetPaginatedAsync(
@@ -131,7 +131,7 @@ public sealed class NitService(
                     continue;
                 }
 
-                item.Status = NitStatus.OwnershipCheckInProgress;
+                item.Status = NitStatus.VerificationInProgress;
                 item.LastProcessingError = null;
                 item.OwnershipOwnerName = null;
                 await nitRepository.UpdateAsync(item.Id, item);
@@ -144,13 +144,13 @@ public sealed class NitService(
                     item.OwnershipOwnerName = result.OwnerName;
                     if (result.BelongsToSomeone)
                     {
-                        item.Status = NitStatus.RejectedOwnedByAnotherPerson;
-                        rejectedOwnedByAnotherPerson++;
+                        item.Status = NitStatus.NotFound;
+                        notFound++;
                     }
                     else
                     {
-                        item.Status = NitStatus.PendingContributionCalculation;
-                        movedToContributionCalculation++;
+                        item.Status = NitStatus.Unbound;
+                        movedToPendingPeriodExtraction++;
                     }
 
                     await nitRepository.UpdateAsync(item.Id, item);
@@ -158,7 +158,7 @@ public sealed class NitService(
                 }
                 catch (Exception ex)
                 {
-                    item.Status = NitStatus.PendingOwnershipCheck;
+                    item.Status = NitStatus.QueryError;
                     item.LastProcessingError = ex.Message;
                     item.OwnershipOwnerName = null;
                     await nitRepository.UpdateAsync(item.Id, item);
@@ -169,17 +169,17 @@ public sealed class NitService(
 
         return new ProcessOwnershipChecksResultDto(
             Processed: processed,
-            MovedToContributionCalculation: movedToContributionCalculation,
-            RejectedOwnedByAnotherPerson: rejectedOwnedByAnotherPerson,
+            MovedToPendingPeriodExtraction: movedToPendingPeriodExtraction,
+            NotFound: notFound,
             Errors: errors
         );
     }
 
-    public async Task<IReadOnlyCollection<PendingContributionNitDto>> GetPendingContributionCalculationAsync()
+    public async Task<IReadOnlyCollection<PendingContributionNitDto>> GetPendingPeriodExtractionAsync()
     {
-        var filter = Builders<NitEntity>.Filter.Eq(
+        var filter = Builders<NitEntity>.Filter.In(
             x => x.Status,
-            NitStatus.PendingContributionCalculation
+            [NitStatus.Unbound, NitStatus.PendingPeriodExtraction]
         );
 
         var pagedResult = await nitRepository.GetPaginatedAsync(
@@ -226,9 +226,11 @@ public sealed class NitService(
             Builders<NitEntity>.Filter.In(
                 x => x.Status,
                 [
-                    NitStatus.PendingContributionCalculation,
-                    NitStatus.ReadyForPersonBinding,
-                    NitStatus.BoundToPerson
+                    NitStatus.Unbound,
+                    NitStatus.PendingPeriodExtraction,
+                    NitStatus.PeriodExtractionInProgress,
+                    NitStatus.ReadyToUse,
+                    NitStatus.Bound
                 ]
             )
         );
@@ -245,18 +247,32 @@ public sealed class NitService(
             );
         }
 
-        var firstContribution = dates.Min();
-        var lastContribution = dates.Max();
-
-        nitEntity.FirstContributionDate = firstContribution;
-        nitEntity.LastContributionDate = lastContribution;
-        nitEntity.ContributionYears = CalculateContributionYears(firstContribution, lastContribution);
-        nitEntity.Status = nitEntity.PersonId is null
-            ? NitStatus.ReadyForPersonBinding
-            : NitStatus.BoundToPerson;
+        nitEntity.Status = NitStatus.PeriodExtractionInProgress;
         nitEntity.LastProcessingError = null;
-
         await nitRepository.UpdateAsync(nitEntity.Id, nitEntity);
+
+        try
+        {
+            var firstContribution = dates.Min();
+            var lastContribution = dates.Max();
+
+            nitEntity.FirstContributionDate = firstContribution;
+            nitEntity.LastContributionDate = lastContribution;
+            nitEntity.ContributionYears = CalculateContributionYears(firstContribution, lastContribution);
+            nitEntity.Status = nitEntity.PersonId is null
+                ? NitStatus.ReadyToUse
+                : NitStatus.Bound;
+            nitEntity.LastProcessingError = null;
+
+            await nitRepository.UpdateAsync(nitEntity.Id, nitEntity);
+        }
+        catch (Exception ex)
+        {
+            nitEntity.Status = NitStatus.QueryError;
+            nitEntity.LastProcessingError = ex.Message;
+            await nitRepository.UpdateAsync(nitEntity.Id, nitEntity);
+            throw;
+        }
 
         return new ContributionDetailsImportResultDto(
             ProcessedFiles: 1,
@@ -280,14 +296,15 @@ public sealed class NitService(
         if (nit?.Id is null)
             throw new ArgumentException("NIT nao encontrado.");
 
-        if (nit.Status != NitStatus.ReadyForPersonBinding &&
-            nit.Status != NitStatus.BoundToPerson)
+        if (nit.Status != NitStatus.Unbound &&
+            nit.Status != NitStatus.ReadyToUse &&
+            nit.Status != NitStatus.Bound)
         {
             throw new InvalidOperationException("NIT ainda nao esta pronto para vinculo com person.");
         }
 
         nit.PersonId = person.Id;
-        nit.Status = NitStatus.BoundToPerson;
+        nit.Status = NitStatus.Bound;
 
         await nitRepository.UpdateAsync(nit.Id, nit);
     }
@@ -424,7 +441,7 @@ public sealed class NitService(
                 FirstContributionDate = null,
                 LastContributionDate = null,
                 ContributionYears = 0,
-                Status = NitStatus.PendingOwnershipCheck,
+                Status = NitStatus.PendingVerification,
                 LastProcessingError = null,
                 OwnershipCheckedAt = null
             };
