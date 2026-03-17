@@ -132,6 +132,7 @@ public sealed class SocialSecurityRegistrationService(
 
                 item.Status = SocialSecurityRegistrationStatus.OwnershipCheckInProgress;
                 item.LastProcessingError = null;
+                item.OwnershipOwnerName = null;
                 await socialSecurityRegistrationRepository.UpdateAsync(item.Id, item);
 
                 try
@@ -139,6 +140,7 @@ public sealed class SocialSecurityRegistrationService(
                     var result = await nitOwnershipChecker.CheckAsync(item.Number, cancellationToken);
 
                     item.OwnershipCheckedAt = DateTime.UtcNow;
+                    item.OwnershipOwnerName = result.OwnerName;
                     if (result.BelongsToSomeone)
                     {
                         item.Status = SocialSecurityRegistrationStatus.RejectedOwnedByAnotherPerson;
@@ -157,6 +159,7 @@ public sealed class SocialSecurityRegistrationService(
                 {
                     item.Status = SocialSecurityRegistrationStatus.PendingOwnershipCheck;
                     item.LastProcessingError = ex.Message;
+                    item.OwnershipOwnerName = null;
                     await socialSecurityRegistrationRepository.UpdateAsync(item.Id, item);
                     errors++;
                 }

@@ -19,5 +19,6 @@ public class SocialSecurityRegistration : IEntity
     [BsonRepresentation(BsonType.String)]
     public SocialSecurityRegistrationStatus Status { get; set; }
     public DateTime? OwnershipCheckedAt { get; set; }
+    public string? OwnershipOwnerName { get; set; }
     public string? LastProcessingError { get; set; }
 }

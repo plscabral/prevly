@@ -64,6 +64,17 @@ public sealed class NitOwnershipChecker(
             );
         }
 
+        var contributor = TryExtractContributor(responseBody);
+        if (contributor.HasContributorObject)
+        {
+            // Regra acordada: se contribuinte.name vier null, considera sem vinculo.
+            var belongsToSomeone = !string.IsNullOrWhiteSpace(contributor.OwnerName);
+            return new NitOwnershipCheckResultDto(
+                BelongsToSomeone: belongsToSomeone,
+                OwnerName: contributor.OwnerName
+            );
+        }
+
         var content = responseBody.ToLowerInvariant();
         var hasOwnedIndicator = ContainsAny(content, _config.OwnedIndicators);
         var hasNotOwnedIndicator = ContainsAny(content, _config.NotOwnedIndicators);
@@ -72,10 +83,10 @@ public sealed class NitOwnershipChecker(
             logger.LogWarning("Resultado ambiguo na consulta de titularidade para NIT {Nit}.", nit);
 
         if (hasOwnedIndicator)
-            return new NitOwnershipCheckResultDto(BelongsToSomeone: true);
+            return new NitOwnershipCheckResultDto(BelongsToSomeone: true, OwnerName: null);
 
         if (hasNotOwnedIndicator)
-            return new NitOwnershipCheckResultDto(BelongsToSomeone: false);
+            return new NitOwnershipCheckResultDto(BelongsToSomeone: false, OwnerName: null);
 
         throw new InvalidOperationException("Nao foi possivel determinar o resultado da consulta de titularidade.");
     }
@@ -117,6 +128,37 @@ public sealed class NitOwnershipChecker(
         }
 
         return false;
+    }
+
+    private static (bool HasContributorObject, string? OwnerName) TryExtractContributor(string responseBody)
+    {
+        try
+        {
+            using var json = JsonDocument.Parse(responseBody);
+            var root = json.RootElement;
+
+            if (!root.TryGetProperty("contribuinte", out var contributor))
+                return (false, null);
+
+            if (contributor.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+                return (true, null);
+
+            if (contributor.ValueKind != JsonValueKind.Object)
+                return (true, null);
+
+            if (!contributor.TryGetProperty("name", out var nameProperty))
+                return (true, null);
+
+            if (nameProperty.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined)
+                return (true, null);
+
+            var ownerName = nameProperty.GetString();
+            return (true, string.IsNullOrWhiteSpace(ownerName) ? null : ownerName.Trim());
+        }
+        catch
+        {
+            return (false, null);
+        }
     }
 }
 
