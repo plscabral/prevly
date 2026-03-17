@@ -1,12 +1,12 @@
-using System.IO.Compression;
 using ClosedXML.Excel;
 using Microsoft.AspNetCore.Mvc;
+using Prevly.Api.SocialSecurityRegistration.Flows;
 using Prevly.Api.SocialSecurityRegistration.Dtos;
+using Prevly.Api.SocialSecurityRegistration.Services;
 using Prevly.Application.SocialSecurityRegistration.Dtos;
 using Prevly.Application.SocialSecurityRegistration.Interfaces;
 using Prevly.Domain.Interfaces;
 using Provly.Shared.Pagination;
-using SharpCompress.Archives.Rar;
 
 namespace Prevly.Api.Controllers;
 
@@ -15,7 +15,10 @@ namespace Prevly.Api.Controllers;
 public class SocialSecurityRegistrationController(
     ILogger<SocialSecurityRegistrationController> logger,
     ISocialSecurityRegistrationService socialSecurityRegistrationService,
-    IPersonRepository personRepository
+    IPersonRepository personRepository,
+    IPdfImportFileExtractor pdfImportFileExtractor,
+    NitCheckFlow nitCheckFlow,
+    NitDetailFlow nitDetailFlow
 ) : AuthorizeController
 {
     [HttpGet]
@@ -44,22 +47,20 @@ public class SocialSecurityRegistrationController(
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
     public async Task<ActionResult<ImportSocialSecurityRegistrationsResultDto>> ImportPdf(
-        [FromForm] ImportPdfRequestDto request
+        [FromForm] ImportPdfRequestDto request,
+        CancellationToken cancellationToken
     )
     {
         try
         {
             if (request.File is null || request.File.Length == 0)
-                return BadRequest("O arquivo PDF e obrigatorio.");
+                return BadRequest("Envie um arquivo .pdf, .zip ou .rar.");
 
-            await using var stream = request.File.OpenReadStream();
+            var documents = await pdfImportFileExtractor.ExtractPdfDocumentsAsync(request.File, cancellationToken);
+            if (documents.Count == 0)
+                return BadRequest("Nenhum PDF valido foi encontrado no arquivo enviado.");
 
-            var result = await socialSecurityRegistrationService.ImportFromPdfAsync(
-                stream,
-                request.File.FileName,
-                request.File.ContentType,
-                request.PersonId
-            );
+            var result = await nitCheckFlow.ExecuteAsync(documents, request.PersonId, cancellationToken);
 
             return Ok(result);
         }
@@ -71,7 +72,7 @@ public class SocialSecurityRegistrationController(
         catch (Exception e)
         {
             logger.LogError(e, e.Message);
-            return StatusCode(500, "Erro ao importar o PDF.");
+            return StatusCode(500, "Erro ao processar importacao de NITs.");
         }
     }
 
@@ -158,49 +159,33 @@ public class SocialSecurityRegistrationController(
         try
         {
             if (files.Count == 0)
-                return BadRequest("Envie ao menos um PDF de detalhe de NIT.");
+                return BadRequest("Envie ao menos um arquivo .pdf, .zip ou .rar.");
 
-            var processedFiles = 0;
-            var updatedRegistrations = 0;
-            var notFoundNits = 0;
-            var invalidFiles = 0;
-            var updatedNitNumbers = new HashSet<string>();
+            var results = new List<ContributionDetailsImportResultDto>();
+            var emptyOrInvalidArchives = 0;
 
             foreach (var file in files)
             {
-                var pdfDocuments = await ExtractPdfDocumentsAsync(file, cancellationToken);
+                var pdfDocuments = await pdfImportFileExtractor.ExtractPdfDocumentsAsync(file, cancellationToken);
                 if (pdfDocuments.Count == 0)
                 {
-                    invalidFiles++;
+                    emptyOrInvalidArchives++;
                     continue;
                 }
 
-                foreach (var document in pdfDocuments)
-                {
-                    await using var stream = new MemoryStream(document.Content, writable: false);
-                    var result = await socialSecurityRegistrationService.ImportContributionDetailsFromPdfAsync(
-                        stream,
-                        document.FileName,
-                        "application/pdf",
-                        cancellationToken
-                    );
-
-                    processedFiles += result.ProcessedFiles;
-                    updatedRegistrations += result.UpdatedRegistrations;
-                    notFoundNits += result.NotFoundNits;
-                    invalidFiles += result.InvalidFiles;
-
-                    foreach (var updatedNit in result.UpdatedNitNumbers)
-                        updatedNitNumbers.Add(updatedNit);
-                }
+                var result = await nitDetailFlow.ExecuteAsync(pdfDocuments, cancellationToken);
+                results.Add(result);
             }
 
             return Ok(new ContributionDetailsImportResultDto(
-                ProcessedFiles: processedFiles,
-                UpdatedRegistrations: updatedRegistrations,
-                NotFoundNits: notFoundNits,
-                InvalidFiles: invalidFiles,
-                UpdatedNitNumbers: updatedNitNumbers.ToList()
+                ProcessedFiles: results.Sum(x => x.ProcessedFiles),
+                UpdatedRegistrations: results.Sum(x => x.UpdatedRegistrations),
+                NotFoundNits: results.Sum(x => x.NotFoundNits),
+                InvalidFiles: emptyOrInvalidArchives + results.Sum(x => x.InvalidFiles),
+                UpdatedNitNumbers: results
+                    .SelectMany(x => x.UpdatedNitNumbers)
+                    .Distinct(StringComparer.Ordinal)
+                    .ToList()
             ));
         }
         catch (ArgumentException e)
@@ -376,94 +361,6 @@ public class SocialSecurityRegistrationController(
     }
 
     #region Private methods
-
-    private static async Task<IReadOnlyCollection<ContributionPdfDocument>> ExtractPdfDocumentsAsync(
-        IFormFile file,
-        CancellationToken cancellationToken
-    )
-    {
-        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-
-        return extension switch
-        {
-            ".pdf" => [await ReadPdfAsync(file, cancellationToken)],
-            ".zip" => await ReadZipAsync(file, cancellationToken),
-            ".rar" => await ReadRarAsync(file, cancellationToken),
-            _ => []
-        };
-    }
-
-    private static async Task<ContributionPdfDocument> ReadPdfAsync(
-        IFormFile file, 
-        CancellationToken cancellationToken
-    )
-    {
-        await using var inputStream = file.OpenReadStream();
-        await using var outputStream = new MemoryStream();
-        await inputStream.CopyToAsync(outputStream, cancellationToken);
-
-        return new ContributionPdfDocument(file.FileName, outputStream.ToArray());
-    }
-
-    private static async Task<IReadOnlyCollection<ContributionPdfDocument>> ReadZipAsync(
-        IFormFile file,
-        CancellationToken cancellationToken
-    )
-    {
-        var documents = new List<ContributionPdfDocument>();
-        await using var inputStream = file.OpenReadStream();
-        using var archive = new ZipArchive(inputStream, ZipArchiveMode.Read, leaveOpen: false);
-
-        foreach (var entry in archive.Entries)
-        {
-            if (entry.FullName.EndsWith("/", StringComparison.Ordinal))
-                continue;
-
-            if (!Path.GetExtension(entry.Name).Equals(".pdf", StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            await using var entryStream = entry.Open();
-            await using var outputStream = new MemoryStream();
-            await entryStream.CopyToAsync(outputStream, cancellationToken);
-            documents.Add(new ContributionPdfDocument(entry.Name, outputStream.ToArray()));
-        }
-
-        return documents;
-    }
-
-    private static async Task<IReadOnlyCollection<ContributionPdfDocument>> ReadRarAsync(
-        IFormFile file,
-        CancellationToken cancellationToken
-    )
-    {
-        var documents = new List<ContributionPdfDocument>();
-        await using var inputStream = file.OpenReadStream();
-        using var archive = RarArchive.Open(inputStream);
-
-        foreach (var entry in archive.Entries.Where(x => !x.IsDirectory))
-        {
-            var entryKey = entry.Key;
-            if (string.IsNullOrWhiteSpace(entryKey))
-                continue;
-
-            if (!Path.GetExtension(entryKey).Equals(".pdf", StringComparison.OrdinalIgnoreCase))
-                continue;
-
-            await using var entryStream = entry.OpenEntryStream();
-            await using var outputStream = new MemoryStream();
-            await entryStream.CopyToAsync(outputStream, cancellationToken);
-            var fileName = Path.GetFileName(entryKey);
-            if (string.IsNullOrWhiteSpace(fileName))
-                fileName = "document.pdf";
-
-            documents.Add(new ContributionPdfDocument(fileName, outputStream.ToArray()));
-        }
-
-        return documents;
-    }
-
-    private sealed record ContributionPdfDocument(string FileName, byte[] Content);
-
     public sealed class ExportSocialSecurityRegistrationsRequestDto
     {
         public string? Query { get; init; }

@@ -11,6 +11,7 @@ using Prevly.Domain.Entities;
 using Prevly.Domain.Interfaces;
 using Provly.Shared.Pagination;
 using UglyToad.PdfPig;
+using UglyToad.PdfPig.Core;
 using SocialSecurityRegistrationEntity = Prevly.Domain.Entities.SocialSecurityRegistration;
 
 namespace Prevly.Application.SocialSecurityRegistration.Services;
@@ -476,9 +477,24 @@ public sealed class SocialSecurityRegistrationService(
 
     private static string ExtractNativePdfText(byte[] pdfBytes)
     {
-        using var stream = new MemoryStream(pdfBytes);
-        using var pdf = PdfDocument.Open(stream);
-        return string.Join(Environment.NewLine, pdf.GetPages().Select(page => page.Text));
+        try
+        {
+            using var stream = new MemoryStream(pdfBytes);
+            using var pdf = PdfDocument.Open(stream);
+            return string.Join(Environment.NewLine, pdf.GetPages().Select(page => page.Text));
+        }
+        catch (PdfDocumentFormatException)
+        {
+            return string.Empty;
+        }
+        catch (InvalidOperationException)
+        {
+            return string.Empty;
+        }
+        catch (NotSupportedException)
+        {
+            return string.Empty;
+        }
     }
 
     private static async Task<string> TryExtractTextWithOcrAsync(byte[] pdfBytes)

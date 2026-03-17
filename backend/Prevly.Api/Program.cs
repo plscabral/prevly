@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
+using Prevly.Api.SocialSecurityRegistration.Flows;
+using Prevly.Api.SocialSecurityRegistration.Services;
 using Prevly.Application.Person.Interfaces;
 using Prevly.Application.Person.Services;
 using Prevly.Application.SocialSecurityRegistration.Integrations.Interfaces;
@@ -79,6 +81,9 @@ builder.Services.AddCors(options =>
 // services
 builder.Services.AddScoped<IPersonService, PersonService>();
 builder.Services.AddScoped<ISocialSecurityRegistrationService, SocialSecurityRegistrationService>();
+builder.Services.AddScoped<IPdfImportFileExtractor, PdfImportFileExtractor>();
+builder.Services.AddScoped<NitCheckFlow>();
+builder.Services.AddScoped<NitDetailFlow>();
 
 
 // repositories
