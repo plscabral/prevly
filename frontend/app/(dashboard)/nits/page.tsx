@@ -44,7 +44,9 @@ export default function NitsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [importOpen, setImportOpen] = useState(false);
   const [forceRefreshing, setForceRefreshing] = useState(false);
-  const [selectedNits, setSelectedNits] = useState<SocialSecurityRegistration[]>([]);
+  const [selectedNits, setSelectedNits] = useState<
+    SocialSecurityRegistration[]
+  >([]);
   const [isExporting, setIsExporting] = useState(false);
 
   const nitsQuery = useGetApiSocialSecurityRegistration({
@@ -141,17 +143,20 @@ export default function NitsPage() {
 
     setIsExporting(true);
     try {
-      const response = await customFetchRaw("/api/SocialSecurityRegistration/export", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await customFetchRaw(
+        "/api/SocialSecurityRegistration/export",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            query: searchQuery.trim() || null,
+            status: statusFilter === "all" ? null : Number(statusFilter),
+            registrationIds: selectedIds,
+          }),
         },
-        body: JSON.stringify({
-          query: searchQuery.trim() || null,
-          status: statusFilter === "all" ? null : Number(statusFilter),
-          registrationIds: selectedIds,
-        }),
-      });
+      );
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -166,11 +171,17 @@ export default function NitsPage() {
       anchor.click();
       URL.revokeObjectURL(url);
 
-      toast.success(selectedIds.length
-        ? `${selectedIds.length} NIT(s) exportado(s).`
-        : "Relatório exportado com filtros aplicados.");
+      toast.success(
+        selectedIds.length
+          ? `${selectedIds.length} NIT(s) exportado(s).`
+          : "Relatório exportado com filtros aplicados.",
+      );
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Erro ao exportar relatorio de NITs.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Erro ao exportar relatorio de NITs.",
+      );
     } finally {
       setIsExporting(false);
     }
@@ -196,7 +207,7 @@ export default function NitsPage() {
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl">
-              <DialogHeader>
+              <DialogHeader className="mb-3">
                 <DialogTitle>Importar NITs</DialogTitle>
               </DialogHeader>
               <ImportNitsDialog onClose={() => setImportOpen(false)} />
@@ -264,7 +275,9 @@ export default function NitsPage() {
             onClick={handleRefresh}
             disabled={isRefreshing}
           >
-            <RefreshCw className={isRefreshing ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
+            <RefreshCw
+              className={isRefreshing ? "h-4 w-4 animate-spin" : "h-4 w-4"}
+            />
             Atualizar
           </Button>
           <Button
