@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import { Toaster } from '@/components/ui/sonner'
 import { ThemeProvider } from '@/components/theme-provider'
+import { ApiQueryProvider } from '@/lib/api/query-provider'
 import './globals.css'
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
@@ -31,8 +32,10 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
-          <Toaster position="top-right" />
+          <ApiQueryProvider>
+            {children}
+            <Toaster position="top-right" />
+          </ApiQueryProvider>
         </ThemeProvider>
         <Analytics />
       </body>

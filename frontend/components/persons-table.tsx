@@ -1,17 +1,19 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
+import { useState } from "react";
+import Link from "next/link";
 import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
-  useReactTable,
   getSortedRowModel,
+  RowSelectionState,
   SortingState,
-} from '@tanstack/react-table'
-import { Eye, EyeOff, Copy, Check, ArrowUpDown, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
-import { Person } from '@/lib/types'
-import { Button } from '@/components/ui/button'
+  useReactTable,
+} from "@tanstack/react-table";
+import { ArrowUpDown, Check, Copy, Eye, EyeOff, FileText } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -19,35 +21,32 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { toast } from 'sonner'
+} from "@/components/ui/table";
+import { Person } from "@/lib/api/generated/model";
+import { toast } from "sonner";
 
 interface PersonsTableProps {
-  data: Person[]
+  data: Person[];
 }
 
-function PasswordCell({ password }: { password: string }) {
-  const [isVisible, setIsVisible] = useState(false)
-  const [copied, setCopied] = useState(false)
+function PasswordCell({ password }: { password?: string | null }) {
+  const [isVisible, setIsVisible] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const safePassword = password ?? "";
+
+  if (!safePassword) return <span className="text-muted-foreground">-</span>;
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(password)
-    setCopied(true)
-    toast.success('Senha copiada!')
-    setTimeout(() => setCopied(false), 2000)
-  }
+    await navigator.clipboard.writeText(safePassword);
+    setCopied(true);
+    toast.success("Senha copiada!");
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <div className="flex items-center gap-1.5">
-      <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
-        {isVisible ? password : '••••••••'}
+      <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+        {isVisible ? safePassword : "••••••••"}
       </code>
       <Button
         variant="ghost"
@@ -61,12 +60,7 @@ function PasswordCell({ password }: { password: string }) {
           <Eye className="h-3.5 w-3.5 text-muted-foreground" />
         )}
       </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={handleCopy}
-        className="h-7 w-7 p-0"
-      >
+      <Button variant="ghost" size="sm" onClick={handleCopy} className="h-7 w-7 p-0">
         {copied ? (
           <Check className="h-3.5 w-3.5 text-emerald-600" />
         ) : (
@@ -74,124 +68,132 @@ function PasswordCell({ password }: { password: string }) {
         )}
       </Button>
     </div>
-  )
+  );
 }
 
-const columns: ColumnDef<Person>[] = [
-  {
-    accessorKey: 'name',
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        className="-ml-3 h-8 font-medium"
-      >
-        Nome
-        <ArrowUpDown className="ml-1.5 h-3.5 w-3.5" />
-      </Button>
-    ),
-    cell: ({ row }) => (
-      <span className="font-medium">{row.getValue('name')}</span>
-    ),
-  },
-  {
-    accessorKey: 'document',
-    header: 'CPF',
-    cell: ({ row }) => (
-      <span className="font-mono text-sm text-muted-foreground">{row.getValue('document')}</span>
-    ),
-  },
-  {
-    accessorKey: 'age',
-    header: ({ column }) => (
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
-        className="-ml-3 h-8 font-medium"
-      >
-        Idade
-        <ArrowUpDown className="ml-1.5 h-3.5 w-3.5" />
-      </Button>
-    ),
-    cell: ({ row }) => (
-      <span className="tabular-nums">{row.getValue('age')} anos</span>
-    ),
-  },
-  {
-    accessorKey: 'govPassword',
-    header: 'Senha Gov.br',
-    cell: ({ row }) => <PasswordCell password={row.getValue('govPassword')} />,
-  },
-  {
-    accessorKey: 'nitNumber',
-    header: 'NIT Vinculado',
-    cell: ({ row }) => {
-      const nit = row.getValue('nitNumber') as string | undefined
-      return nit ? (
-        <span className="font-mono text-sm">{nit}</span>
-      ) : (
-        <span className="text-muted-foreground">-</span>
-      )
-    },
-  },
-  {
-    accessorKey: 'createdAt',
-    header: 'Cadastrado em',
-    cell: ({ row }) => {
-      const date = row.getValue('createdAt') as Date
-      return (
-        <span className="text-sm text-muted-foreground">
-          {new Date(date).toLocaleDateString('pt-BR')}
-        </span>
-      )
-    },
-  },
-  {
-    id: 'actions',
-    cell: ({ row }) => {
-      const person = row.original
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-              <MoreHorizontal className="h-4 w-4" />
-              <span className="sr-only">Abrir menu</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem 
-              onClick={() => {
-                navigator.clipboard.writeText(person.govPassword)
-                toast.success('Senha copiada')
-              }}
-            >
-              <Copy className="mr-2 h-4 w-4" />
-              Copiar Senha
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
-              <Pencil className="mr-2 h-4 w-4" />
-              Editar
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem 
-              className="text-red-600 focus:text-red-600"
-              onClick={() => toast.info('Funcionalidade em desenvolvimento')}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Remover
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      )
-    },
-    size: 50,
-  },
-]
-
 export function PersonsTable({ data }: PersonsTableProps) {
-  const [sorting, setSorting] = useState<SortingState>([])
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+
+  const columns: ColumnDef<Person>[] = [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <div className="pl-2">
+          <Checkbox
+            checked={
+              table.getIsAllPageRowsSelected() ||
+              (table.getIsSomePageRowsSelected() && "indeterminate")
+            }
+            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            aria-label="Selecionar todos"
+          />
+        </div>
+      ),
+      cell: ({ row }) => (
+        <div className="pl-2">
+          <Checkbox
+            checked={row.getIsSelected()}
+            onCheckedChange={(value) => row.toggleSelected(!!value)}
+            aria-label="Selecionar linha"
+          />
+        </div>
+      ),
+      enableSorting: false,
+      enableHiding: false,
+      size: 52,
+    },
+    {
+      id: "details",
+      header: "",
+      cell: ({ row }) => (
+        <Button asChild variant="ghost" size="sm" className="h-8 w-8 p-0">
+          <Link href={`/pessoas/${row.original.id}`}>
+            <FileText className="h-4 w-4" />
+            <span className="sr-only">Abrir detalhe</span>
+          </Link>
+        </Button>
+      ),
+      enableSorting: false,
+      enableHiding: false,
+      size: 40,
+    },
+    {
+      accessorKey: "name",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="-ml-3 h-8 text-xs font-medium"
+        >
+          Nome
+          <ArrowUpDown className="ml-1.5 size-3" />
+        </Button>
+      ),
+      cell: ({ row }) => <span className="font-medium">{row.original.name ?? "-"}</span>,
+    },
+    {
+      accessorKey: "cpf",
+      header: "CPF",
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground">{row.original.cpf ?? "-"}</span>
+      ),
+    },
+    {
+      accessorKey: "age",
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="-ml-3 h-8 text-xs font-medium"
+        >
+          Idade
+          <ArrowUpDown className="ml-1.5 size-3" />
+        </Button>
+      ),
+      cell: ({ row }) => (
+        <span className="tabular-nums">
+          {row.original.age ? `${row.original.age} anos` : "-"}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "govPassword",
+      header: "Senha Gov.br",
+      cell: ({ row }) => <PasswordCell password={row.original.govPassword} />,
+    },
+    {
+      id: "mainContact",
+      header: "Contato",
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground">
+          {row.original.phone || row.original.whatsApp || "-"}
+        </span>
+      ),
+    },
+    {
+      id: "nitNumber",
+      header: "NIT Vinculado",
+      cell: ({ row }) => (
+        <span className="text-sm">
+          {row.original.socialSecurityRegistrationId || "-"}
+        </span>
+      ),
+    },
+    {
+      accessorKey: "createdAt",
+      header: "Cadastrado em",
+      cell: ({ row }) => (
+        <span className="text-sm text-muted-foreground">
+          {row.original.createdAt
+            ? new Date(row.original.createdAt).toLocaleDateString("pt-BR")
+            : "-"}
+        </span>
+      ),
+    },
+  ];
 
   const table = useReactTable({
     data,
@@ -199,13 +201,13 @@ export function PersonsTable({ data }: PersonsTableProps) {
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     onSortingChange: setSorting,
-    state: {
-      sorting,
-    },
-  })
+    onRowSelectionChange: setRowSelection,
+    enableRowSelection: true,
+    state: { sorting, rowSelection },
+  });
 
   return (
-    <div className="rounded-lg border border-border bg-card overflow-hidden">
+    <div className="overflow-hidden rounded-lg border border-border bg-card">
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -214,35 +216,26 @@ export function PersonsTable({ data }: PersonsTableProps) {
                 <TableHead key={header.id} className="h-11 text-xs font-medium text-muted-foreground">
                   {header.isPlaceholder
                     ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
+                    : flexRender(header.column.columnDef.header, header.getContext())}
                 </TableHead>
               ))}
             </TableRow>
           ))}
         </TableHeader>
         <TableBody>
-          {table.getRowModel().rows?.length ? (
+          {table.getRowModel().rows.length ? (
             table.getRowModel().rows.map((row) => (
               <TableRow key={row.id} className="group">
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id} className="py-3">
-                    {flexRender(
-                      cell.column.columnDef.cell,
-                      cell.getContext()
-                    )}
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
                 ))}
               </TableRow>
             ))
           ) : (
             <TableRow>
-              <TableCell
-                colSpan={columns.length}
-                className="h-32 text-center text-muted-foreground"
-              >
+              <TableCell colSpan={columns.length} className="h-32 text-center text-muted-foreground">
                 Nenhuma pessoa encontrada.
               </TableCell>
             </TableRow>
@@ -250,5 +243,5 @@ export function PersonsTable({ data }: PersonsTableProps) {
         </TableBody>
       </Table>
     </div>
-  )
+  );
 }

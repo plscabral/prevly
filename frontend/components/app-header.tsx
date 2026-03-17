@@ -1,9 +1,12 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from './theme-toggle'
+import { Button } from './ui/button'
+import { authClient } from '@/lib/auth-client'
+import { LogOut } from 'lucide-react'
 
 const navigation = [
   { name: 'Dashboard', href: '/' },
@@ -13,6 +16,13 @@ const navigation = [
 
 export function AppHeader() {
   const pathname = usePathname()
+  const router = useRouter()
+
+  const handleSignOut = async () => {
+    await authClient.signOut()
+    window.localStorage.removeItem('prevly_token')
+    router.replace('/sign-in')
+  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -51,8 +61,13 @@ export function AppHeader() {
           </nav>
         </div>
 
-        {/* Theme Toggle */}
-        <ThemeToggle />
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <Button variant="ghost" size="sm" onClick={handleSignOut} className="gap-1.5">
+            <LogOut className="h-4 w-4" />
+            Sair
+          </Button>
+        </div>
       </div>
     </header>
   )

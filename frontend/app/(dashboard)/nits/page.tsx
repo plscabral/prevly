@@ -1,72 +1,104 @@
-'use client'
+"use client";
 
-import { useState, useMemo } from 'react'
-import { Plus, Search, X, Calendar, Filter, Download } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { useMemo, useState } from "react";
+import { Download, Filter, Plus, Search, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog'
-import { NitsTable } from '@/components/nits-table'
-import { ImportNitsDialog } from '@/components/import-nits-dialog'
-import { mockNITs } from '@/lib/store'
-import { SocialSecurityRegistrationStatus, statusLabels } from '@/lib/types'
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ImportNitsDialog } from "@/components/import-nits-dialog";
+import { NitsTable } from "@/components/nits-table";
+import { statusLabels } from "@/lib/types";
+import {
+  getApiSocialSecurityRegistrationResponseSuccess,
+  getGetApiSocialSecurityRegistrationQueryKey,
+  useGetApiSocialSecurityRegistration,
+  usePostApiSocialSecurityRegistrationBindPerson,
+} from "@/lib/api/generated/social-security-registration/social-security-registration";
+import { getApiPersonResponseSuccess, useGetApiPerson } from "@/lib/api/generated/person/person";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 export default function NitsPage() {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
-  const [yearFilter, setYearFilter] = useState<string>('all')
-  const [importOpen, setImportOpen] = useState(false)
+  const queryClient = useQueryClient();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [importOpen, setImportOpen] = useState(false);
 
-  const filteredNITs = useMemo(() => {
-    return mockNITs.filter((nit) => {
-      const matchesSearch = nit.number.toLowerCase().includes(searchQuery.toLowerCase())
-      const matchesStatus = statusFilter === 'all' || nit.status.toString() === statusFilter
-      const matchesYear = yearFilter === 'all' || 
-        new Date(nit.createdAt).getFullYear().toString() === yearFilter
+  const nitsQuery = useGetApiSocialSecurityRegistration({ PageNumber: 1, PageSize: 500 });
+  const personsQuery = useGetApiPerson({ PageNumber: 1, PageSize: 500 });
+  const bindPersonMutation = usePostApiSocialSecurityRegistrationBindPerson();
 
-      return matchesSearch && matchesStatus && matchesYear
-    })
-  }, [searchQuery, statusFilter, yearFilter])
+  const nits =
+    (nitsQuery.data as getApiSocialSecurityRegistrationResponseSuccess | undefined)?.data.data ?? [];
+  const persons = (personsQuery.data as getApiPersonResponseSuccess | undefined)?.data.data ?? [];
 
-  const years = useMemo(() => {
-    const uniqueYears = [...new Set(mockNITs.map(nit => new Date(nit.createdAt).getFullYear()))]
-    return uniqueYears.sort((a, b) => b - a)
-  }, [])
+  const personNamesById = useMemo(
+    () =>
+      Object.fromEntries(
+        persons
+          .filter((person) => person.id && person.name)
+          .map((person) => [person.id!, person.name!]),
+      ),
+    [persons],
+  );
 
-  const hasFilters = searchQuery || statusFilter !== 'all' || yearFilter !== 'all'
+  const filteredNits = useMemo(
+    () =>
+      nits.filter((nit) => {
+        const query = searchQuery.toLowerCase();
+        const matchesSearch =
+          (nit.number ?? "").toLowerCase().includes(query) ||
+          (nit.ownershipOwnerName ?? "").toLowerCase().includes(query);
+        const matchesStatus = statusFilter === "all" || `${nit.status}` === statusFilter;
+        return matchesSearch && matchesStatus;
+      }),
+    [nits, searchQuery, statusFilter],
+  );
 
-  const clearFilters = () => {
-    setSearchQuery('')
-    setStatusFilter('all')
-    setYearFilter('all')
-  }
+  const onBindPerson = async (registrationId?: string | null) => {
+    if (!registrationId) return;
+    const personId = window.prompt("Informe o ID da pessoa para vincular este NIT:");
+    if (!personId) return;
+
+    try {
+      await bindPersonMutation.mutateAsync({
+        data: { socialSecurityRegistrationId: registrationId, personId },
+      });
+      await queryClient.invalidateQueries({
+        queryKey: getGetApiSocialSecurityRegistrationQueryKey(),
+      });
+      toast.success("NIT vinculado com sucesso.");
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Erro ao vincular NIT.");
+    }
+  };
+
+  const hasFilters = searchQuery || statusFilter !== "all";
 
   return (
     <div className="flex flex-col gap-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">NITs</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Gerencie os registros de Número de Identificação do Trabalhador
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">Gerencie os registros de NIT.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" className="gap-2">
+          <Button variant="outline" className="gap-2" disabled>
             <Download className="h-4 w-4" />
-            Extrair Relatorio
+            Extrair Relatório
           </Button>
           <Dialog open={importOpen} onOpenChange={setImportOpen}>
             <DialogTrigger asChild>
@@ -75,32 +107,33 @@ export default function NitsPage() {
                 Importar NITs
               </Button>
             </DialogTrigger>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Importar NITs de PDF</DialogTitle>
-            </DialogHeader>
-            <ImportNitsDialog onClose={() => setImportOpen(false)} />
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Importar NITs</DialogTitle>
+              </DialogHeader>
+              <ImportNitsDialog onClose={() => setImportOpen(false)} />
             </DialogContent>
           </Dialog>
         </div>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar por número..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 bg-card"
+            onChange={(event) => setSearchQuery(event.target.value)}
+            className="bg-card pl-9"
           />
         </div>
 
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[200px] bg-card">
-            <Filter className="mr-2 h-4 w-4 text-muted-foreground" />
-            <SelectValue placeholder="Status" />
+          <SelectTrigger className="w-[220px] bg-card">
+            <span className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-muted-foreground" />
+              <SelectValue placeholder="Status" />
+            </span>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os Status</SelectItem>
@@ -112,36 +145,41 @@ export default function NitsPage() {
           </SelectContent>
         </Select>
 
-        <Select value={yearFilter} onValueChange={setYearFilter}>
-          <SelectTrigger className="w-[140px] bg-card">
-            <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
-            <SelectValue placeholder="Ano" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os Anos</SelectItem>
-            {years.map((year) => (
-              <SelectItem key={year} value={year.toString()}>
-                {year}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
         {hasFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1.5 text-muted-foreground">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setSearchQuery("");
+              setStatusFilter("all");
+            }}
+            className="gap-1.5 text-muted-foreground"
+          >
             <X className="h-4 w-4" />
             Limpar filtros
           </Button>
         )}
       </div>
 
-      {/* Results count */}
       <div className="text-sm text-muted-foreground">
-        {filteredNITs.length} {filteredNITs.length === 1 ? 'registro encontrado' : 'registros encontrados'}
+        {filteredNits.length} {filteredNits.length === 1 ? "registro encontrado" : "registros encontrados"}
       </div>
 
-      {/* Table */}
-      <NitsTable data={filteredNITs} />
+      {nitsQuery.isLoading ? (
+        <div className="rounded-lg border border-border bg-card p-8 text-sm text-muted-foreground">
+          Carregando NITs...
+        </div>
+      ) : nitsQuery.isError ? (
+        <div className="rounded-lg border border-red-200 bg-red-50 p-8 text-sm text-red-700">
+          Erro ao carregar NITs.
+        </div>
+      ) : (
+        <NitsTable
+          data={filteredNits}
+          personNamesById={personNamesById}
+          onBindPerson={(registration) => onBindPerson(registration.id)}
+        />
+      )}
     </div>
-  )
+  );
 }
