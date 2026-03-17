@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Prevly.Api.SocialSecurityRegistration.Dtos;
 using Prevly.Application.SocialSecurityRegistration.Dtos;
 using Prevly.Application.SocialSecurityRegistration.Interfaces;
+using Prevly.Domain.Interfaces;
 using Provly.Shared.Pagination;
 using SharpCompress.Archives.Rar;
 
@@ -13,7 +14,8 @@ namespace Prevly.Api.Controllers;
 [Route("api/[controller]")]
 public class SocialSecurityRegistrationController(
     ILogger<SocialSecurityRegistrationController> logger,
-    ISocialSecurityRegistrationService socialSecurityRegistrationService
+    ISocialSecurityRegistrationService socialSecurityRegistrationService,
+    IPersonRepository personRepository
 ) : AuthorizeController
 {
     [HttpGet]
@@ -280,7 +282,7 @@ public class SocialSecurityRegistrationController(
             {
                 "Número NIT",
                 "Status",
-                "Pessoa Id",
+                "Pessoa",
                 "Titular",
                 "Data início",
                 "Data fim",
@@ -293,17 +295,42 @@ public class SocialSecurityRegistrationController(
                 worksheet.Cell(1, col + 1).Value = headers[col];
             }
 
+            var personNameById = new Dictionary<string, string>(StringComparer.Ordinal);
+            var personIds = registrations
+                .Select(x => x.PersonId)
+                .Where(x => !string.IsNullOrWhiteSpace(x))
+                .Distinct()
+                .ToList();
+
+            foreach (var personId in personIds)
+            {
+                var person = await personRepository.GetByIdAsync(personId!);
+                if (!string.IsNullOrWhiteSpace(person?.Name))
+                {
+                    personNameById[personId!] = person.Name!;
+                }
+            }
+
             var rowIndex = 2;
             foreach (var registration in registrations)
             {
-                worksheet.Cell(rowIndex, 1).Value = registration.Number ?? string.Empty;
+                var linkedPersonName = !string.IsNullOrWhiteSpace(registration.PersonId) &&
+                                       personNameById.TryGetValue(registration.PersonId!, out var name)
+                    ? name
+                    : "-";
+
+                worksheet.Cell(rowIndex, 1).Value = ValueOrDash(registration.Number);
                 worksheet.Cell(rowIndex, 2).Value = registration.Status.ToString();
-                worksheet.Cell(rowIndex, 3).Value = registration.PersonId ?? string.Empty;
-                worksheet.Cell(rowIndex, 4).Value = registration.OwnershipOwnerName ?? string.Empty;
-                worksheet.Cell(rowIndex, 5).Value = registration.FirstContributionDate?.ToString("dd/MM/yyyy") ?? string.Empty;
-                worksheet.Cell(rowIndex, 6).Value = registration.LastContributionDate?.ToString("dd/MM/yyyy") ?? string.Empty;
-                worksheet.Cell(rowIndex, 7).Value = registration.ContributionYears;
-                worksheet.Cell(rowIndex, 8).Value = registration.CreatedAt.ToString("dd/MM/yyyy HH:mm");
+                worksheet.Cell(rowIndex, 3).Value = linkedPersonName;
+                worksheet.Cell(rowIndex, 4).Value = ValueOrDash(registration.OwnershipOwnerName);
+                worksheet.Cell(rowIndex, 5).Value = registration.FirstContributionDate?.ToString("dd/MM/yyyy") ?? "-";
+                worksheet.Cell(rowIndex, 6).Value = registration.LastContributionDate?.ToString("dd/MM/yyyy") ?? "-";
+                worksheet.Cell(rowIndex, 7).Value = registration.ContributionYears > 0
+                    ? registration.ContributionYears
+                    : "-";
+                worksheet.Cell(rowIndex, 8).Value = registration.CreatedAt == default
+                    ? "-"
+                    : registration.CreatedAt.ToString("dd/MM/yyyy HH:mm");
                 rowIndex++;
             }
 
@@ -443,6 +470,9 @@ public class SocialSecurityRegistrationController(
         public Prevly.Domain.Entities.SocialSecurityRegistrationStatus? Status { get; init; }
         public List<string>? RegistrationIds { get; init; }
     }
+
+    private static string ValueOrDash(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? "-" : value;
 
     #endregion
 }

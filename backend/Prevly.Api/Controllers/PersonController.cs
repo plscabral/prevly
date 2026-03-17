@@ -134,11 +134,13 @@ public class PersonController(
             var rowIndex = 2;
             foreach (var person in persons)
             {
-                worksheet.Cell(rowIndex, 1).Value = person.Name ?? string.Empty;
-                worksheet.Cell(rowIndex, 2).Value = person.Cpf ?? string.Empty;
-                worksheet.Cell(rowIndex, 3).Value = person.WhatsApp ?? string.Empty;
-                worksheet.Cell(rowIndex, 4).Value = person.SocialSecurityRegistrationId ?? string.Empty;
-                worksheet.Cell(rowIndex, 5).Value = person.CreatedAt.ToString("dd/MM/yyyy HH:mm");
+                worksheet.Cell(rowIndex, 1).Value = ValueOrDash(person.Name);
+                worksheet.Cell(rowIndex, 2).Value = ValueOrDash(person.Cpf);
+                worksheet.Cell(rowIndex, 3).Value = ValueOrDash(person.WhatsApp);
+                worksheet.Cell(rowIndex, 4).Value = ValueOrDash(person.SocialSecurityRegistrationId);
+                worksheet.Cell(rowIndex, 5).Value = person.CreatedAt == default
+                    ? "-"
+                    : person.CreatedAt.ToString("dd/MM/yyyy HH:mm");
                 rowIndex++;
             }
 
@@ -185,4 +187,7 @@ public class PersonController(
         public string? Query { get; init; }
         public List<string>? PersonIds { get; init; }
     }
+
+    private static string ValueOrDash(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? "-" : value;
 }
