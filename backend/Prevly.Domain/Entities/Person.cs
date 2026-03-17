@@ -16,7 +16,7 @@ public class Person : IEntity
     public int? Age { get; set; }
     
     public string? GovPassword { get; set; }
-    public string? SocialSecurityRegistrationId { get; set; }
+    public string? NitId { get; set; }
     public DateTime? BirthDate { get; set; }
     public DateTime CreatedAt { get; set; }
 }

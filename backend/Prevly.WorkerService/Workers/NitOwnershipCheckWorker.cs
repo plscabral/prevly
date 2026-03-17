@@ -1,4 +1,4 @@
-using Prevly.Application.SocialSecurityRegistration.Interfaces;
+using Prevly.Application.Nit.Interfaces;
 
 namespace Prevly.WorkerService.Workers;
 
@@ -16,7 +16,7 @@ public sealed class NitOwnershipCheckWorker(
             try
             {
                 using var scope = serviceProvider.CreateScope();
-                var service = scope.ServiceProvider.GetRequiredService<ISocialSecurityRegistrationService>();
+                var service = scope.ServiceProvider.GetRequiredService<INitService>();
 
                 var result = await service.ProcessPendingOwnershipChecksAsync(stoppingToken);
                 if (result.Processed > 0 || result.Errors > 0)

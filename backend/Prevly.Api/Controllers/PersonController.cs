@@ -137,7 +137,7 @@ public class PersonController(
                 worksheet.Cell(rowIndex, 1).Value = ValueOrDash(person.Name);
                 worksheet.Cell(rowIndex, 2).Value = ValueOrDash(person.Cpf);
                 worksheet.Cell(rowIndex, 3).Value = ValueOrDash(person.WhatsApp);
-                worksheet.Cell(rowIndex, 4).Value = ValueOrDash(person.SocialSecurityRegistrationId);
+                worksheet.Cell(rowIndex, 4).Value = ValueOrDash(person.NitId);
                 worksheet.Cell(rowIndex, 5).Value = person.CreatedAt == default
                     ? "-"
                     : person.CreatedAt.ToString("dd/MM/yyyy HH:mm");

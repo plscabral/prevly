@@ -3,14 +3,14 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
-using Prevly.Api.SocialSecurityRegistration.Flows;
-using Prevly.Api.SocialSecurityRegistration.Services;
+using Prevly.Api.Nit.Flows;
+using Prevly.Api.Nit.Services;
 using Prevly.Application.Person.Interfaces;
 using Prevly.Application.Person.Services;
-using Prevly.Application.SocialSecurityRegistration.Integrations.Interfaces;
-using Prevly.Application.SocialSecurityRegistration.Integrations.Services;
-using Prevly.Application.SocialSecurityRegistration.Interfaces;
-using Prevly.Application.SocialSecurityRegistration.Services;
+using Prevly.Application.Nit.Integrations.Interfaces;
+using Prevly.Application.Nit.Integrations.Services;
+using Prevly.Application.Nit.Interfaces;
+using Prevly.Application.Nit.Services;
 using Prevly.Domain.Entities;
 using Prevly.Domain.Interfaces;
 using Prevly.Infrastructure;
@@ -80,7 +80,7 @@ builder.Services.AddCors(options =>
 
 // services
 builder.Services.AddScoped<IPersonService, PersonService>();
-builder.Services.AddScoped<ISocialSecurityRegistrationService, SocialSecurityRegistrationService>();
+builder.Services.AddScoped<INitService, NitService>();
 builder.Services.AddScoped<IPdfImportFileExtractor, PdfImportFileExtractor>();
 builder.Services.AddScoped<NitCheckFlow>();
 builder.Services.AddScoped<NitDetailFlow>();
@@ -89,7 +89,7 @@ builder.Services.AddScoped<NitDetailFlow>();
 // repositories
 builder.Services.AddScoped<IAccountRepository, AccountRepository>();
 builder.Services.AddScoped<IPersonRepository, PersonRepository>();
-builder.Services.AddScoped<ISocialSecurityRegistrationRepository, SocialSecurityRegistrationRepository>();
+builder.Services.AddScoped<INitRepository, NitRepository>();
 
 // builder.Services.AddScoped<NitOwnershipChecker>();
 builder.Services.AddScoped<INitOwnershipChecker, NitOwnershipChecker>();

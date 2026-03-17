@@ -1,9 +1,9 @@
 using Microsoft.Extensions.Options;
 using MongoDB.Driver;
-using Prevly.Application.SocialSecurityRegistration.Integrations.Interfaces;
-using Prevly.Application.SocialSecurityRegistration.Integrations.Services;
-using Prevly.Application.SocialSecurityRegistration.Interfaces;
-using Prevly.Application.SocialSecurityRegistration.Services;
+using Prevly.Application.Nit.Integrations.Interfaces;
+using Prevly.Application.Nit.Integrations.Services;
+using Prevly.Application.Nit.Interfaces;
+using Prevly.Application.Nit.Services;
 using Prevly.Domain.Interfaces;
 using Prevly.Infrastructure;
 using Provly.Shared.Settings;
@@ -33,8 +33,8 @@ builder.Services.AddSingleton<IMongoDatabase>(sp =>
 
 // repositories
 builder.Services.AddScoped<IPersonRepository, PersonRepository>();
-builder.Services.AddScoped<ISocialSecurityRegistrationRepository, SocialSecurityRegistrationRepository>();
-builder.Services.AddScoped<ISocialSecurityRegistrationService, SocialSecurityRegistrationService>();
+builder.Services.AddScoped<INitRepository, NitRepository>();
+builder.Services.AddScoped<INitService, NitService>();
 
 builder.Services.AddScoped<NitOwnershipChecker>();
 builder.Services.AddScoped<INitOwnershipChecker>(sp => sp.GetRequiredService<NitOwnershipChecker>());
