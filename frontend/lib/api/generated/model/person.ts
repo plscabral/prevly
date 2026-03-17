@@ -21,7 +21,7 @@ export interface Person {
   /** @nullable */
   govPassword?: string | null;
   /** @nullable */
-  socialSecurityRegistrationId?: string | null;
+  nitId?: string | null;
   /** @nullable */
   birthDate?: string | null;
   createdAt?: string;

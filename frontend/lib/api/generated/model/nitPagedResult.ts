@@ -4,11 +4,11 @@
  * Prevly.Api
  * OpenAPI spec version: 1.0
  */
-import type { SocialSecurityRegistration } from './socialSecurityRegistration';
+import type { Nit } from './nit';
 
-export interface SocialSecurityRegistrationPagedResult {
+export interface NitPagedResult {
   /** @nullable */
-  data?: SocialSecurityRegistration[] | null;
+  data?: Nit[] | null;
   pageNumber?: number;
   pageSize?: number;
   totalRecords?: number;

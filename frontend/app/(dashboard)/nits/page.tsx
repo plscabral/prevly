@@ -23,17 +23,17 @@ import { ImportNitsDialog } from "@/components/import-nits-dialog";
 import { NitsTable } from "@/components/nits-table";
 import { statusLabels } from "@/lib/types";
 import {
-  getApiSocialSecurityRegistrationResponseSuccess,
-  getGetApiSocialSecurityRegistrationQueryKey,
-  useGetApiSocialSecurityRegistration,
-  usePostApiSocialSecurityRegistrationBindPerson,
-} from "@/lib/api/generated/social-security-registration/social-security-registration";
+  getApiNitResponseSuccess,
+  getGetApiNitQueryKey,
+  useGetApiNit,
+  usePostApiNitBindPerson,
+} from "@/lib/api/generated/nit/nit";
 import {
   getApiPersonResponseSuccess,
   getGetApiPersonQueryKey,
   useGetApiPerson,
 } from "@/lib/api/generated/person/person";
-import { SocialSecurityRegistration } from "@/lib/api/generated/model";
+import { Nit } from "@/lib/api/generated/model";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { customFetchRaw } from "@/lib/api/http-client";
@@ -45,21 +45,21 @@ export default function NitsPage() {
   const [importOpen, setImportOpen] = useState(false);
   const [forceRefreshing, setForceRefreshing] = useState(false);
   const [selectedNits, setSelectedNits] = useState<
-    SocialSecurityRegistration[]
+    Nit[]
   >([]);
   const [isExporting, setIsExporting] = useState(false);
 
-  const nitsQuery = useGetApiSocialSecurityRegistration({
+  const nitsQuery = useGetApiNit({
     PageNumber: 1,
     PageSize: 500,
   });
   const personsQuery = useGetApiPerson({ PageNumber: 1, PageSize: 500 });
-  const bindPersonMutation = usePostApiSocialSecurityRegistrationBindPerson();
+  const bindPersonMutation = usePostApiNitBindPerson();
 
   const nits =
     (
       nitsQuery.data as
-        | getApiSocialSecurityRegistrationResponseSuccess
+        | getApiNitResponseSuccess
         | undefined
     )?.data.data ?? [];
   const persons =
@@ -90,8 +90,8 @@ export default function NitsPage() {
     [nits, searchQuery, statusFilter],
   );
 
-  const onBindPerson = async (registrationId?: string | null) => {
-    if (!registrationId) return;
+  const onBindPerson = async (nitId?: string | null) => {
+    if (!nitId) return;
     const personId = window.prompt(
       "Informe o ID da pessoa para vincular este NIT:",
     );
@@ -99,10 +99,10 @@ export default function NitsPage() {
 
     try {
       await bindPersonMutation.mutateAsync({
-        data: { socialSecurityRegistrationId: registrationId, personId },
+        data: { nitId: nitId, personId },
       });
       await queryClient.invalidateQueries({
-        queryKey: getGetApiSocialSecurityRegistrationQueryKey(),
+        queryKey: getGetApiNitQueryKey(),
       });
       toast.success("NIT vinculado com sucesso.");
     } catch (error) {
@@ -121,7 +121,7 @@ export default function NitsPage() {
     try {
       await Promise.all([
         queryClient.invalidateQueries({
-          queryKey: getGetApiSocialSecurityRegistrationQueryKey(),
+          queryKey: getGetApiNitQueryKey(),
         }),
         queryClient.invalidateQueries({ queryKey: getGetApiPersonQueryKey() }),
       ]);
@@ -144,7 +144,7 @@ export default function NitsPage() {
     setIsExporting(true);
     try {
       const response = await customFetchRaw(
-        "/api/SocialSecurityRegistration/export",
+        "/api/Nit/export",
         {
           method: "POST",
           headers: {
@@ -153,7 +153,7 @@ export default function NitsPage() {
           body: JSON.stringify({
             query: searchQuery.trim() || null,
             status: statusFilter === "all" ? null : Number(statusFilter),
-            registrationIds: selectedIds,
+            nitIds: selectedIds,
           }),
         },
       );
@@ -331,7 +331,7 @@ export default function NitsPage() {
         <NitsTable
           data={filteredNits}
           personNamesById={personNamesById}
-          onBindPerson={(registration) => onBindPerson(registration.id)}
+          onBindPerson={(nit) => onBindPerson(nit.id)}
           onSelectionChange={setSelectedNits}
         />
       )}

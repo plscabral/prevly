@@ -7,5 +7,5 @@
 
 export interface CreateNitReportRequestDto {
   /** @nullable */
-  registrationIds?: string[] | null;
+  nitIds?: string[] | null;
 }

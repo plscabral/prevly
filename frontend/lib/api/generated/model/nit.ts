@@ -4,9 +4,9 @@
  * Prevly.Api
  * OpenAPI spec version: 1.0
  */
-import type { SocialSecurityRegistrationStatus } from './socialSecurityRegistrationStatus';
+import type { NitStatus } from './nitStatus';
 
-export interface SocialSecurityRegistration {
+export interface Nit {
   /** @nullable */
   id?: string | null;
   /** @nullable */
@@ -19,7 +19,7 @@ export interface SocialSecurityRegistration {
   createdAt?: string;
   /** @nullable */
   personId?: string | null;
-  status?: SocialSecurityRegistrationStatus;
+  status?: NitStatus;
   /** @nullable */
   ownershipCheckedAt?: string | null;
   /** @nullable */

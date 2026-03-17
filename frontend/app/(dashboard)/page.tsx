@@ -12,35 +12,35 @@ import {
   useGetApiPerson,
 } from "@/lib/api/generated/person/person";
 import {
-  getGetApiSocialSecurityRegistrationQueryKey,
-  getApiSocialSecurityRegistrationResponseSuccess,
-  useGetApiSocialSecurityRegistration,
-} from "@/lib/api/generated/social-security-registration/social-security-registration";
-import { SocialSecurityRegistrationStatus } from "@/lib/api/generated/model";
+  getGetApiNitQueryKey,
+  getApiNitResponseSuccess,
+  useGetApiNit,
+} from "@/lib/api/generated/nit/nit";
+import { NitStatus } from "@/lib/api/generated/model";
 import { useQueryClient } from "@tanstack/react-query";
 
 export default function DashboardPage() {
   const queryClient = useQueryClient();
   const [forceRefreshing, setForceRefreshing] = useState(false);
   const personsQuery = useGetApiPerson({ PageNumber: 1, PageSize: 500 });
-  const nitsQuery = useGetApiSocialSecurityRegistration({ PageNumber: 1, PageSize: 500 });
+  const nitsQuery = useGetApiNit({ PageNumber: 1, PageSize: 500 });
 
   const persons = (personsQuery.data as getApiPersonResponseSuccess | undefined)?.data.data ?? [];
   const nits =
-    (nitsQuery.data as getApiSocialSecurityRegistrationResponseSuccess | undefined)?.data.data ?? [];
+    (nitsQuery.data as getApiNitResponseSuccess | undefined)?.data.data ?? [];
 
   const totalPersons = persons.length;
-  const personsWithNit = persons.filter((person) => person.socialSecurityRegistrationId).length;
+  const personsWithNit = persons.filter((person) => person.nitId).length;
   const totalNits = nits.length;
-  const boundNits = nits.filter((nit) => nit.status === SocialSecurityRegistrationStatus.NUMBER_5).length;
+  const boundNits = nits.filter((nit) => nit.status === NitStatus.NUMBER_5).length;
   const pendingNits = nits.filter(
     (nit) =>
-      nit.status === SocialSecurityRegistrationStatus.NUMBER_0 ||
-      nit.status === SocialSecurityRegistrationStatus.NUMBER_3 ||
-      nit.status === SocialSecurityRegistrationStatus.NUMBER_4,
+      nit.status === NitStatus.NUMBER_0 ||
+      nit.status === NitStatus.NUMBER_3 ||
+      nit.status === NitStatus.NUMBER_4,
   ).length;
   const processingNits = nits.filter(
-    (nit) => nit.status === SocialSecurityRegistrationStatus.NUMBER_1,
+    (nit) => nit.status === NitStatus.NUMBER_1,
   ).length;
 
   const stats = [
@@ -89,7 +89,7 @@ export default function DashboardPage() {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: getGetApiPersonQueryKey() }),
         queryClient.invalidateQueries({
-          queryKey: getGetApiSocialSecurityRegistrationQueryKey(),
+          queryKey: getGetApiNitQueryKey(),
         }),
       ]);
       await Promise.all([personsQuery.refetch(), nitsQuery.refetch()]);

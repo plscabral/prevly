@@ -5,7 +5,7 @@
  * OpenAPI spec version: 1.0
  */
 
-export type PostApiSocialSecurityRegistrationImportPdfBody = {
+export type PostApiNitImportPdfBody = {
   File?: Blob;
   PersonId?: string;
 };

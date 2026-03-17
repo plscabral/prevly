@@ -27,13 +27,13 @@ import {
   usePostApiPerson,
 } from "@/lib/api/generated/person/person";
 import {
-  getApiSocialSecurityRegistrationResponseSuccess,
-  getGetApiSocialSecurityRegistrationQueryKey,
-  useGetApiSocialSecurityRegistration,
-  postApiSocialSecurityRegistrationBindPersonResponseSuccess,
-  usePostApiSocialSecurityRegistrationBindPerson,
-} from "@/lib/api/generated/social-security-registration/social-security-registration";
-import { SocialSecurityRegistrationStatus } from "@/lib/api/generated/model";
+  getApiNitResponseSuccess,
+  getGetApiNitQueryKey,
+  useGetApiNit,
+  postApiNitBindPersonResponseSuccess,
+  usePostApiNitBindPerson,
+} from "@/lib/api/generated/nit/nit";
+import { NitStatus } from "@/lib/api/generated/model";
 
 interface FormErrors {
   name?: string;
@@ -62,7 +62,7 @@ export function PersonForm() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const createPersonMutation = usePostApiPerson();
-  const bindPersonMutation = usePostApiSocialSecurityRegistrationBindPerson();
+  const bindPersonMutation = usePostApiNitBindPerson();
   const [errors, setErrors] = useState<FormErrors>({});
   const [selectedNitId, setSelectedNitId] = useState("");
   const [formData, setFormData] = useState({
@@ -73,10 +73,10 @@ export function PersonForm() {
     birthDate: "",
   });
 
-  const nitsQuery = useGetApiSocialSecurityRegistration({
+  const nitsQuery = useGetApiNit({
     PageNumber: 1,
     PageSize: 500,
-    Status: SocialSecurityRegistrationStatus.NUMBER_4,
+    Status: NitStatus.NUMBER_4,
   });
 
   const nitOptions = useMemo(
@@ -84,7 +84,7 @@ export function PersonForm() {
       (
         (
           nitsQuery.data as
-            | getApiSocialSecurityRegistrationResponseSuccess
+            | getApiNitResponseSuccess
             | undefined
         )?.data.data ?? []
       ).filter((nit) => nit.id && nit.number),
@@ -124,16 +124,16 @@ export function PersonForm() {
       if (selectedNitId) {
         await (bindPersonMutation.mutateAsync({
           data: {
-            socialSecurityRegistrationId: selectedNitId,
+            nitId: selectedNitId,
             personId: createdPerson.id,
           },
-        }) as Promise<postApiSocialSecurityRegistrationBindPersonResponseSuccess>);
+        }) as Promise<postApiNitBindPersonResponseSuccess>);
       }
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: getGetApiPersonQueryKey() }),
         queryClient.invalidateQueries({
-          queryKey: getGetApiSocialSecurityRegistrationQueryKey(),
+          queryKey: getGetApiNitQueryKey(),
         }),
       ]);
 

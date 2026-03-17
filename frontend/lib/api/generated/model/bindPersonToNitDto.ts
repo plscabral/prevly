@@ -7,7 +7,7 @@
 
 export interface BindPersonToNitDto {
   /** @nullable */
-  socialSecurityRegistrationId?: string | null;
+  nitId?: string | null;
   /** @nullable */
   personId?: string | null;
 }

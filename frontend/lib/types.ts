@@ -1,4 +1,4 @@
-export enum SocialSecurityRegistrationStatus {
+export enum NitStatus {
   PendingOwnershipCheck = 0,
   OwnershipCheckInProgress = 1,
   RejectedOwnedByAnotherPerson = 2,
@@ -7,47 +7,47 @@ export enum SocialSecurityRegistrationStatus {
   BoundToPerson = 5,
 }
 
-export const statusLabels: Record<SocialSecurityRegistrationStatus, string> = {
-  [SocialSecurityRegistrationStatus.PendingOwnershipCheck]: "Aguardando Verificação",
-  [SocialSecurityRegistrationStatus.OwnershipCheckInProgress]: "Verificação em Andamento",
-  [SocialSecurityRegistrationStatus.RejectedOwnedByAnotherPerson]:
+export const statusLabels: Record<NitStatus, string> = {
+  [NitStatus.PendingOwnershipCheck]: "Aguardando Verificação",
+  [NitStatus.OwnershipCheckInProgress]: "Verificação em Andamento",
+  [NitStatus.RejectedOwnedByAnotherPerson]:
     "Rejeitado - Pertence a Outra Pessoa",
-  [SocialSecurityRegistrationStatus.PendingContributionCalculation]:
+  [NitStatus.PendingContributionCalculation]:
     "Calculando Contribuições",
-  [SocialSecurityRegistrationStatus.ReadyForPersonBinding]: "Pronto para Vincular",
-  [SocialSecurityRegistrationStatus.BoundToPerson]: "Vinculado",
+  [NitStatus.ReadyForPersonBinding]: "Pronto para Vincular",
+  [NitStatus.BoundToPerson]: "Vinculado",
 };
 
 export const statusColors: Record<
-  SocialSecurityRegistrationStatus,
+  NitStatus,
   { bg: string; text: string; dot: string }
 > = {
-  [SocialSecurityRegistrationStatus.PendingOwnershipCheck]: {
+  [NitStatus.PendingOwnershipCheck]: {
     bg: "bg-amber-50",
     text: "text-amber-700",
     dot: "bg-amber-500",
   },
-  [SocialSecurityRegistrationStatus.OwnershipCheckInProgress]: {
+  [NitStatus.OwnershipCheckInProgress]: {
     bg: "bg-blue-50",
     text: "text-blue-700",
     dot: "bg-blue-500",
   },
-  [SocialSecurityRegistrationStatus.RejectedOwnedByAnotherPerson]: {
+  [NitStatus.RejectedOwnedByAnotherPerson]: {
     bg: "bg-red-50",
     text: "text-red-700",
     dot: "bg-red-500",
   },
-  [SocialSecurityRegistrationStatus.PendingContributionCalculation]: {
+  [NitStatus.PendingContributionCalculation]: {
     bg: "bg-blue-50",
     text: "text-blue-700",
     dot: "bg-blue-500",
   },
-  [SocialSecurityRegistrationStatus.ReadyForPersonBinding]: {
+  [NitStatus.ReadyForPersonBinding]: {
     bg: "bg-emerald-50",
     text: "text-emerald-700",
     dot: "bg-emerald-500",
   },
-  [SocialSecurityRegistrationStatus.BoundToPerson]: {
+  [NitStatus.BoundToPerson]: {
     bg: "bg-emerald-50",
     text: "text-emerald-700",
     dot: "bg-emerald-500",

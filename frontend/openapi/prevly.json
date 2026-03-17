@@ -497,10 +497,10 @@
         }
       }
     },
-    "/api/SocialSecurityRegistration": {
+    "/api/Nit": {
       "get": {
         "tags": [
-          "SocialSecurityRegistration"
+          "Nit"
         ],
         "parameters": [
           {
@@ -514,7 +514,7 @@
             "name": "Status",
             "in": "query",
             "schema": {
-              "$ref": "#/components/schemas/SocialSecurityRegistrationStatus"
+              "$ref": "#/components/schemas/NitStatus"
             }
           },
           {
@@ -551,17 +551,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/SocialSecurityRegistrationPagedResult"
+                  "$ref": "#/components/schemas/NitPagedResult"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SocialSecurityRegistrationPagedResult"
+                  "$ref": "#/components/schemas/NitPagedResult"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SocialSecurityRegistrationPagedResult"
+                  "$ref": "#/components/schemas/NitPagedResult"
                 }
               }
             }
@@ -592,10 +592,10 @@
         }
       }
     },
-    "/api/SocialSecurityRegistration/import-pdf": {
+    "/api/Nit/import-pdf": {
       "post": {
         "tags": [
-          "SocialSecurityRegistration"
+          "Nit"
         ],
         "requestBody": {
           "content": {
@@ -629,17 +629,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ImportSocialSecurityRegistrationsResultDto"
+                  "$ref": "#/components/schemas/ImportNitsResultDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ImportSocialSecurityRegistrationsResultDto"
+                  "$ref": "#/components/schemas/ImportNitsResultDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ImportSocialSecurityRegistrationsResultDto"
+                  "$ref": "#/components/schemas/ImportNitsResultDto"
                 }
               }
             }
@@ -670,10 +670,10 @@
         }
       }
     },
-    "/api/SocialSecurityRegistration/import-simple": {
+    "/api/Nit/import-simple": {
       "post": {
         "tags": [
-          "SocialSecurityRegistration"
+          "Nit"
         ],
         "requestBody": {
           "content": {
@@ -700,17 +700,17 @@
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/ImportSocialSecurityRegistrationsResultDto"
+                  "$ref": "#/components/schemas/ImportNitsResultDto"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ImportSocialSecurityRegistrationsResultDto"
+                  "$ref": "#/components/schemas/ImportNitsResultDto"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ImportSocialSecurityRegistrationsResultDto"
+                  "$ref": "#/components/schemas/ImportNitsResultDto"
                 }
               }
             }
@@ -741,10 +741,10 @@
         }
       }
     },
-    "/api/SocialSecurityRegistration/process-pending-ownership": {
+    "/api/Nit/process-pending-ownership": {
       "post": {
         "tags": [
-          "SocialSecurityRegistration"
+          "Nit"
         ],
         "responses": {
           "200": {
@@ -773,10 +773,10 @@
         }
       }
     },
-    "/api/SocialSecurityRegistration/pending-contribution-calculation": {
+    "/api/Nit/pending-contribution-calculation": {
       "get": {
         "tags": [
-          "SocialSecurityRegistration"
+          "Nit"
         ],
         "responses": {
           "200": {
@@ -814,10 +814,10 @@
         }
       }
     },
-    "/api/SocialSecurityRegistration/import-contribution-details": {
+    "/api/Nit/import-contribution-details": {
       "post": {
         "tags": [
-          "SocialSecurityRegistration"
+          "Nit"
         ],
         "requestBody": {
           "content": {
@@ -889,10 +889,10 @@
         }
       }
     },
-    "/api/SocialSecurityRegistration/bind-person": {
+    "/api/Nit/bind-person": {
       "post": {
         "tags": [
-          "SocialSecurityRegistration"
+          "Nit"
         ],
         "requestBody": {
           "content": {
@@ -943,10 +943,10 @@
         }
       }
     },
-    "/api/SocialSecurityRegistration/report": {
+    "/api/Nit/report": {
       "post": {
         "tags": [
-          "SocialSecurityRegistration"
+          "Nit"
         ],
         "requestBody": {
           "content": {
@@ -1053,7 +1053,7 @@
       "BindPersonToNitDto": {
         "type": "object",
         "properties": {
-          "socialSecurityRegistrationId": {
+          "nitId": {
             "type": "string",
             "nullable": true
           },
@@ -1071,7 +1071,7 @@
             "type": "integer",
             "format": "int32"
           },
-          "updatedRegistrations": {
+          "updatedNits": {
             "type": "integer",
             "format": "int32"
           },
@@ -1096,7 +1096,7 @@
       "CreateNitReportRequestDto": {
         "type": "object",
         "properties": {
-          "registrationIds": {
+          "nitIds": {
             "type": "array",
             "items": {
               "type": "string"
@@ -1167,7 +1167,7 @@
         },
         "additionalProperties": false
       },
-      "ImportSocialSecurityRegistrationsResultDto": {
+      "ImportNitsResultDto": {
         "type": "object",
         "properties": {
           "totalCandidates": {
@@ -1272,7 +1272,7 @@
             "type": "string",
             "nullable": true
           },
-          "socialSecurityRegistrationId": {
+          "nitId": {
             "type": "string",
             "nullable": true
           },
@@ -1367,7 +1367,7 @@
         },
         "additionalProperties": false
       },
-      "SocialSecurityRegistration": {
+      "Nit": {
         "type": "object",
         "properties": {
           "id": {
@@ -1401,7 +1401,7 @@
             "nullable": true
           },
           "status": {
-            "$ref": "#/components/schemas/SocialSecurityRegistrationStatus"
+            "$ref": "#/components/schemas/NitStatus"
           },
           "ownershipCheckedAt": {
             "type": "string",
@@ -1419,13 +1419,13 @@
         },
         "additionalProperties": false
       },
-      "SocialSecurityRegistrationPagedResult": {
+      "NitPagedResult": {
         "type": "object",
         "properties": {
           "data": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/SocialSecurityRegistration"
+              "$ref": "#/components/schemas/Nit"
             },
             "nullable": true
           },
@@ -1449,7 +1449,7 @@
         },
         "additionalProperties": false
       },
-      "SocialSecurityRegistrationStatus": {
+      "NitStatus": {
         "enum": [
           0,
           1,

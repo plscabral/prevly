@@ -46,17 +46,17 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import {
-  SocialSecurityRegistration,
-  SocialSecurityRegistrationStatus,
+  Nit,
+  NitStatus,
 } from "@/lib/api/generated/model";
 import { statusColors, statusLabels } from "@/lib/types";
 import { toast } from "sonner";
 
 interface NitsTableProps {
-  data: SocialSecurityRegistration[];
+  data: Nit[];
   personNamesById: Record<string, string>;
-  onBindPerson: (registration: SocialSecurityRegistration) => void;
-  onSelectionChange?: (selected: SocialSecurityRegistration[]) => void;
+  onBindPerson: (nit: Nit) => void;
+  onSelectionChange?: (selected: Nit[]) => void;
 }
 
 function StatusBadge({ status }: { status?: number }) {
@@ -126,7 +126,7 @@ export function NitsTable({
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
-  const columns: ColumnDef<SocialSecurityRegistration>[] = [
+  const columns: ColumnDef<Nit>[] = [
     {
       id: "select",
       header: ({ table }) => (
@@ -253,7 +253,7 @@ export function NitsTable({
     {
       id: "actions",
       cell: ({ row }) => {
-        const registration = row.original;
+        const nit = row.original;
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -264,8 +264,8 @@ export function NitsTable({
             <DropdownMenuContent align="end">
               <DropdownMenuItem
                 onClick={() => {
-                  if (registration.number) {
-                    navigator.clipboard.writeText(registration.number);
+                  if (nit.number) {
+                    navigator.clipboard.writeText(nit.number);
                     toast.success("NIT copiado");
                   }
                 }}
@@ -273,9 +273,9 @@ export function NitsTable({
                 <Link2 className="mr-2 h-4 w-4" />
                 Copiar NIT
               </DropdownMenuItem>
-              {registration.status ===
-                SocialSecurityRegistrationStatus.NUMBER_4 && (
-                <DropdownMenuItem onClick={() => onBindPerson(registration)}>
+              {nit.status ===
+                NitStatus.NUMBER_4 && (
+                <DropdownMenuItem onClick={() => onBindPerson(nit)}>
                   <UserPlus className="mr-2 h-4 w-4" />
                   Vincular a Pessoa
                 </DropdownMenuItem>
@@ -305,8 +305,8 @@ export function NitsTable({
       .filter(([, isSelected]) => isSelected)
       .map(([rowId]) => data[Number(rowId)])
       .filter(
-        (registration): registration is SocialSecurityRegistration =>
-          Boolean(registration),
+        (nit): nit is Nit =>
+          Boolean(nit),
       );
     onSelectionChange(selected);
   }, [onSelectionChange, rowSelection, data]);

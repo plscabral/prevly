@@ -7,7 +7,7 @@
 
 export interface ContributionDetailsImportResultDto {
   processedFiles?: number;
-  updatedRegistrations?: number;
+  updatedNits?: number;
   notFoundNits?: number;
   invalidFiles?: number;
   /** @nullable */

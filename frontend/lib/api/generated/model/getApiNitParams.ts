@@ -4,11 +4,11 @@
  * Prevly.Api
  * OpenAPI spec version: 1.0
  */
-import type { SocialSecurityRegistrationStatus } from './socialSecurityRegistrationStatus';
+import type { NitStatus } from './nitStatus';
 
-export type GetApiSocialSecurityRegistrationParams = {
+export type GetApiNitParams = {
 Number?: string;
-Status?: SocialSecurityRegistrationStatus;
+Status?: NitStatus;
 PersonId?: string;
 /**
  * @minimum 1

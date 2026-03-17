@@ -5,10 +5,10 @@
  * OpenAPI spec version: 1.0
  */
 
-export type SocialSecurityRegistrationStatus = typeof SocialSecurityRegistrationStatus[keyof typeof SocialSecurityRegistrationStatus];
+export type NitStatus = typeof NitStatus[keyof typeof NitStatus];
 
 
-export const SocialSecurityRegistrationStatus = {
+export const NitStatus = {
   NUMBER_0: 0,
   NUMBER_1: 1,
   NUMBER_2: 2,

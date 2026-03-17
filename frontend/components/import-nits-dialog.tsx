@@ -8,13 +8,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
-  getGetApiSocialSecurityRegistrationQueryKey,
-  usePostApiSocialSecurityRegistrationImportContributionDetails,
-  usePostApiSocialSecurityRegistrationImportPdf,
-} from "@/lib/api/generated/social-security-registration/social-security-registration";
+  getGetApiNitQueryKey,
+  usePostApiNitImportContributionDetails,
+  usePostApiNitImportPdf,
+} from "@/lib/api/generated/nit/nit";
 import {
   ContributionDetailsImportResultDto,
-  ImportSocialSecurityRegistrationsResultDto,
+  ImportNitsResultDto,
 } from "@/lib/api/generated/model";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -29,9 +29,9 @@ export function ImportNitsDialog({ onClose }: ImportNitsDialogProps) {
   const queryClient = useQueryClient();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [flow, setFlow] = useState<ImportFlow>("nit-check");
-  const importPdfMutation = usePostApiSocialSecurityRegistrationImportPdf();
+  const importPdfMutation = usePostApiNitImportPdf();
   const importContributionDetailsMutation =
-    usePostApiSocialSecurityRegistrationImportContributionDetails();
+    usePostApiNitImportContributionDetails();
   const isImporting =
     importPdfMutation.isPending || importContributionDetailsMutation.isPending;
 
@@ -64,7 +64,7 @@ export function ImportNitsDialog({ onClose }: ImportNitsDialogProps) {
           data: { File: selectedFile },
         });
 
-        const result = response.data as ImportSocialSecurityRegistrationsResultDto;
+        const result = response.data as ImportNitsResultDto;
         toast.success(
           `Checagem concluída. Inseridos: ${result.inserted ?? 0}, duplicados: ${result.duplicates ?? 0}.`,
         );
@@ -75,12 +75,12 @@ export function ImportNitsDialog({ onClose }: ImportNitsDialogProps) {
 
         const result = response.data as ContributionDetailsImportResultDto;
         toast.success(
-          `Detalhes concluídos. Atualizados: ${result.updatedRegistrations ?? 0}, não encontrados: ${result.notFoundNits ?? 0}.`,
+          `Detalhes concluídos. Atualizados: ${result.updatedNits ?? 0}, não encontrados: ${result.notFoundNits ?? 0}.`,
         );
       }
 
       await queryClient.invalidateQueries({
-        queryKey: getGetApiSocialSecurityRegistrationQueryKey(),
+        queryKey: getGetApiNitQueryKey(),
       });
 
       onClose();

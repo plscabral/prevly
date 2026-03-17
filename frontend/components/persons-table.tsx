@@ -169,7 +169,7 @@ export function PersonsTable({ data, onSelectionChange }: PersonsTableProps) {
       header: "NIT Vinculado",
       cell: ({ row }) => (
         <span className="text-sm">
-          {row.original.socialSecurityRegistrationId || "-"}
+          {row.original.nitId || "-"}
         </span>
       ),
     },
