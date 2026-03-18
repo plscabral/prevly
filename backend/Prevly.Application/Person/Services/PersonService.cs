@@ -33,7 +33,11 @@ public sealed class PersonService(
             ? Builders<Domain.Entities.Person>.Filter.And(filters)
             : Builders<Domain.Entities.Person>.Filter.Empty;
 
-        return personRepository.GetPaginatedAsync(filter, parameters);
+        var sort = Builders<Domain.Entities.Person>.Sort
+            .Ascending(person => person.Name)
+            .Ascending(person => person.Id);
+
+        return personRepository.GetPaginatedAsync(filter, parameters, sort);
     }
 
     public Task<Domain.Entities.Person?> GetByIdAsync(string id) => personRepository.GetByIdAsync(id);
@@ -110,7 +114,7 @@ public sealed class PersonService(
     {
         var person = new Domain.Entities.Person
         {
-            Name = request.Name.Trim(),
+            Name = NormalizePersonName(request.Name),
             Cpf = request.Cpf.Trim(),
             Phone = request.Phone?.Trim(),
             WhatsApp = request.WhatsApp?.Trim(),
@@ -130,7 +134,7 @@ public sealed class PersonService(
         if (existingPerson is null)
             return null;
 
-        existingPerson.Name = dto.Name.Trim();
+        existingPerson.Name = NormalizePersonName(dto.Name);
         existingPerson.Cpf = dto.Cpf.Trim();
         existingPerson.Phone = dto.Phone?.Trim();
         existingPerson.WhatsApp = dto.WhatsApp?.Trim();
@@ -157,6 +161,9 @@ public sealed class PersonService(
     )
     {
         const int pageSize = 500;
+        var sort = Builders<Domain.Entities.Person>.Sort
+            .Ascending(person => person.Name)
+            .Ascending(person => person.Id);
         var pageNumber = 1;
         var all = new List<Domain.Entities.Person>();
 
@@ -164,7 +171,8 @@ public sealed class PersonService(
         {
             var page = await personRepository.GetPaginatedAsync(
                 filter,
-                new PaginationParameters { PageNumber = pageNumber, PageSize = pageSize }
+                new PaginationParameters { PageNumber = pageNumber, PageSize = pageSize },
+                sort
             );
 
             if (page.Data.Count == 0)
@@ -179,5 +187,14 @@ public sealed class PersonService(
         }
 
         return all;
+    }
+
+    private static string NormalizePersonName(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return string.Empty;
+
+        var collapsed = string.Join(" ", value.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        return collapsed.ToUpperInvariant();
     }
 }

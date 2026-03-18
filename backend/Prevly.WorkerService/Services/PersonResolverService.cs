@@ -75,5 +75,6 @@ public sealed class PersonResolverService(
             : new string(value.Where(char.IsDigit).ToArray());
 
     private static string NormalizeName(string value) =>
-        string.Join(" ", value.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries));
+        string.Join(" ", value.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries))
+            .ToUpperInvariant();
 }

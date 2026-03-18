@@ -18,12 +18,21 @@ public class MongoRepository<T>(IMongoDatabase database, string? collectionName)
         return await _collection.Find(filter).FirstOrDefaultAsync();
     }
 
-    public async Task<PagedResult<T>> GetPaginatedAsync(FilterDefinition<T> filter, PaginationParameters paginationParameters)
+    public async Task<PagedResult<T>> GetPaginatedAsync(
+        FilterDefinition<T> filter,
+        PaginationParameters paginationParameters,
+        SortDefinition<T>? sort = null
+    )
     {
         long totalRecords = await _collection.CountDocumentsAsync(filter);
-        
-        IList<T> data = await _collection
-            .Find(filter)
+
+        var findQuery = _collection.Find(filter);
+        if (sort is not null)
+        {
+            findQuery = findQuery.Sort(sort);
+        }
+
+        IList<T> data = await findQuery
             .Skip((paginationParameters.PageNumber - 1) * paginationParameters.PageSize)
             .Limit(paginationParameters.PageSize)
             .ToListAsync();
