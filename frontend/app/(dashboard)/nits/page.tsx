@@ -189,7 +189,7 @@ export default function NitsPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             NITs
@@ -201,7 +201,7 @@ export default function NitsPage() {
         <div className="flex items-center gap-2">
           <Dialog open={importOpen} onOpenChange={setImportOpen}>
             <DialogTrigger asChild>
-              <Button className="gap-2">
+              <Button className="w-full gap-2 sm:w-auto">
                 <Plus className="h-4 w-4" />
                 Importar NITs
               </Button>
@@ -217,7 +217,7 @@ export default function NitsPage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
+        <div className="relative w-full sm:flex-1 sm:min-w-[200px] sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar por número..."
@@ -227,22 +227,24 @@ export default function NitsPage() {
           />
         </div>
 
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[220px] bg-card">
-            <span className="flex items-center gap-2">
-              <Filter className="h-4 w-4 text-muted-foreground" />
-              <SelectValue placeholder="Status" />
-            </span>
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os Status</SelectItem>
-            {Object.entries(statusLabels).map(([value, label]) => (
-              <SelectItem key={value} value={value}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <div className="w-full sm:w-auto">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full bg-card sm:w-[220px]">
+              <span className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <SelectValue placeholder="Status" />
+              </span>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os Status</SelectItem>
+              {Object.entries(statusLabels).map(([value, label]) => (
+                <SelectItem key={value} value={value}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         {hasFilters && (
           <Button
@@ -260,18 +262,18 @@ export default function NitsPage() {
         )}
       </div>
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm text-muted-foreground">
           {filteredNits.length}{" "}
           {filteredNits.length === 1
             ? "registro encontrado"
             : "registros encontrados"}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
           <Button
             variant="outline"
             size="sm"
-            className="gap-2"
+            className="flex-1 gap-2 sm:flex-none"
             onClick={handleRefresh}
             disabled={isRefreshing}
           >
@@ -283,7 +285,7 @@ export default function NitsPage() {
           <Button
             variant="outline"
             size="sm"
-            className="gap-2"
+            className="flex-1 gap-2 sm:flex-none"
             onClick={handleExport}
             disabled={isExporting}
           >
@@ -295,7 +297,15 @@ export default function NitsPage() {
 
       {nitsQuery.isLoading || forceRefreshing ? (
         <div className="rounded-lg border border-border bg-card p-4">
-          <div className="space-y-3">
+          <div className="space-y-3 md:hidden">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div key={`nits-mobile-skeleton-${index}`} className="space-y-2 rounded-md border border-border p-3">
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            ))}
+          </div>
+          <div className="hidden space-y-3 md:block">
             <div className="grid grid-cols-[40px_1fr_1fr_1fr_1fr_1fr_1fr_1fr] gap-3">
               <Skeleton className="h-5 w-5 rounded-sm" />
               <Skeleton className="h-4 w-24" />

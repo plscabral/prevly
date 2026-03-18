@@ -106,7 +106,7 @@ export default function PessoasPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             Pessoas
@@ -116,7 +116,7 @@ export default function PessoasPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button asChild>
+          <Button asChild className="w-full sm:w-auto">
             <Link href="/pessoas/nova" className="gap-2">
               <Plus className="h-4 w-4" />
               Nova Pessoa
@@ -126,7 +126,7 @@ export default function PessoasPage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <div className="relative flex-1 min-w-[200px] max-w-sm">
+        <div className="relative w-full sm:flex-1 sm:min-w-[200px] sm:max-w-sm">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Buscar por nome ou CPF..."
@@ -148,18 +148,18 @@ export default function PessoasPage() {
         )}
       </div>
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="text-sm text-muted-foreground">
           {filteredPersons.length}{" "}
           {filteredPersons.length === 1
             ? "pessoa encontrada"
             : "pessoas encontradas"}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
           <Button
             variant="outline"
             size="sm"
-            className="gap-2"
+            className="flex-1 gap-2 sm:flex-none"
             onClick={handleRefresh}
             disabled={isRefreshing}
           >
@@ -169,7 +169,7 @@ export default function PessoasPage() {
           <Button
             variant="outline"
             size="sm"
-            className="gap-2"
+            className="flex-1 gap-2 sm:flex-none"
             onClick={handleExport}
             disabled={isExporting}
           >
@@ -181,7 +181,15 @@ export default function PessoasPage() {
 
       {personsQuery.isLoading || forceRefreshing ? (
         <div className="rounded-lg border border-border bg-card p-4">
-          <div className="space-y-3">
+          <div className="space-y-3 md:hidden">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div key={`persons-mobile-skeleton-${index}`} className="space-y-2 rounded-md border border-border p-3">
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            ))}
+          </div>
+          <div className="hidden space-y-3 md:block">
             <div className="grid grid-cols-[40px_40px_1.4fr_1fr_1.5fr_1.3fr_1fr_1fr_0.9fr] gap-3">
               <Skeleton className="h-5 w-5 rounded-sm" />
               <Skeleton className="h-5 w-5 rounded-sm" />

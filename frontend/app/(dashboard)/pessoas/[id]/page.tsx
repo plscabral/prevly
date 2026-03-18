@@ -349,7 +349,7 @@ export default function PessoaDetalhePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <Link
             href={backHref}
@@ -373,16 +373,16 @@ export default function PessoaDetalhePage() {
             {getRetirementRequestStatusLabel(person.retirementRequestStatus)}
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:flex-nowrap">
           {!isEditing && (
-            <Button variant="outline" className="gap-2" onClick={() => setIsEditing(true)}>
+            <Button variant="outline" className="flex-1 gap-2 sm:flex-none" onClick={() => setIsEditing(true)}>
               <Pencil className="h-4 w-4" />
               Editar
             </Button>
           )}
           <Button
             variant="destructive"
-            className="gap-2"
+            className="flex-1 gap-2 sm:flex-none"
             onClick={handleDelete}
             disabled={deleteMutation.isPending || isSaving}
           >
@@ -396,7 +396,7 @@ export default function PessoaDetalhePage() {
         </div>
       </div>
 
-      <section className="rounded-lg border border-border bg-card p-6">
+      <section className="rounded-lg border border-border bg-card p-4 sm:p-6">
         <h2 className="text-base font-semibold text-foreground">Dados</h2>
         <div className="my-4 h-px w-full bg-border" />
 
@@ -532,7 +532,7 @@ export default function PessoaDetalhePage() {
         </form>
       </section>
 
-      <section className="rounded-lg border border-border bg-card p-6">
+      <section className="rounded-lg border border-border bg-card p-4 sm:p-6">
         <h2 className="text-base font-semibold text-foreground">Histórico de e-mails monitorados</h2>
         <div className="my-4 h-px w-full bg-border" />
 
@@ -555,14 +555,14 @@ export default function PessoaDetalhePage() {
                 <AccordionItem
                   value={itemValue}
                   key={email.id ?? `${email.messageUniqueId}-${email.receivedAt}`}
-                  className="rounded-lg border border-border bg-background px-4 data-[state=open]:pb-4"
+                  className="rounded-lg border border-border bg-background px-4 last:border-b data-[state=open]:pb-4"
                 >
                   <AccordionTrigger className="hover:no-underline">
-                    <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
-                      <p className="truncate text-sm font-semibold text-foreground">
+                    <div className="flex min-w-0 flex-1 flex-col items-start gap-1 overflow-hidden text-left">
+                      <p className="w-full whitespace-normal break-words text-sm font-semibold text-foreground">
                         {emailSubject || "(sem assunto)"}
                       </p>
-                      <span className="shrink-0 text-xs text-muted-foreground">
+                      <span className="text-xs text-muted-foreground">
                         {formatDateTime(email.receivedAt)}
                       </span>
                     </div>
