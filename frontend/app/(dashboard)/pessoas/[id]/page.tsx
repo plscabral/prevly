@@ -2,11 +2,17 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Loader2, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import {
   Field,
   FieldError,
@@ -103,10 +109,52 @@ const formatDateTime = (value?: string | null) => {
   return date.toLocaleString("pt-BR");
 };
 
+const extractPlainText = (value?: string | null) => {
+  if (!value) return "";
+  if (typeof window === "undefined") {
+    return value.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  }
+  const document = new DOMParser().parseFromString(value, "text/html");
+  return (document.body.textContent ?? "").replace(/\s+/g, " ").trim();
+};
+
+const sanitizeEmailHtml = (value?: string | null) => {
+  if (!value) return "";
+  if (typeof window === "undefined") return value;
+
+  const document = new DOMParser().parseFromString(value, "text/html");
+  document.querySelectorAll("script, style, iframe, object, embed, link, meta, img, picture, svg, video, audio, source").forEach((node) => {
+    node.remove();
+  });
+
+  document.querySelectorAll("*").forEach((element) => {
+    Array.from(element.attributes).forEach((attribute) => {
+      const attributeName = attribute.name.toLowerCase();
+      const attributeValue = attribute.value.trim().toLowerCase();
+
+      if (attributeName.startsWith("on")) {
+        element.removeAttribute(attribute.name);
+        return;
+      }
+
+      if ((attributeName === "href" || attributeName === "src") && attributeValue.startsWith("javascript:")) {
+        element.removeAttribute(attribute.name);
+      }
+    });
+  });
+
+  return document.body.innerHTML;
+};
+
+const getEmailAccordionValue = (email: MonitoredEmailDto, index: number) =>
+  `email-${email.id ?? email.messageUniqueId ?? email.receivedAt}-${index}`;
+
 export default function PessoaDetalhePage() {
   const params = useParams<{ id: string }>();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const queryClient = useQueryClient();
+  const backHref = searchParams.get("from") === "dashboard" ? "/" : "/pessoas";
 
   const personDetailsQuery = useQuery({
     queryKey: getPersonDetailsQueryKey(params.id),
@@ -304,7 +352,7 @@ export default function PessoaDetalhePage() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <Link
-            href="/pessoas"
+            href={backHref}
             className="mb-4 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -491,54 +539,76 @@ export default function PessoaDetalhePage() {
         {!monitoredEmails.length ? (
           <p className="text-sm text-muted-foreground">Nenhum e-mail monitorado para esta pessoa.</p>
         ) : (
-          <div className="space-y-4">
-            {monitoredEmails.map((email) => {
+          <Accordion
+            type="single"
+            collapsible
+            defaultValue={getEmailAccordionValue(monitoredEmails[0], 0)}
+            className="space-y-3"
+          >
+            {monitoredEmails.map((email, index) => {
               const emailStatusStyle = getRetirementRequestStatusStyle(email.identifiedStatus);
+              const emailSubject = extractPlainText(email.subject);
+              const renderedEmailHtml = sanitizeEmailHtml(email.rawContent);
+              const itemValue = getEmailAccordionValue(email, index);
 
               return (
-                <article
+                <AccordionItem
+                  value={itemValue}
                   key={email.id ?? `${email.messageUniqueId}-${email.receivedAt}`}
-                  className="rounded-lg border border-border bg-background p-4"
+                  className="rounded-lg border border-border bg-background px-4 data-[state=open]:pb-4"
                 >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <h3 className="text-sm font-semibold text-foreground">{email.subject || "(sem assunto)"}</h3>
-                    <span className="text-xs text-muted-foreground">{formatDateTime(email.receivedAt)}</span>
-                  </div>
+                  <AccordionTrigger className="hover:no-underline">
+                    <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
+                      <p className="truncate text-sm font-semibold text-foreground">
+                        {emailSubject || "(sem assunto)"}
+                      </p>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {formatDateTime(email.receivedAt)}
+                      </span>
+                    </div>
+                  </AccordionTrigger>
 
-                  <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-                    <span><strong>Remetente:</strong> {email.from || "-"}</span>
-                    <span
-                      className={cn(
-                        "inline-flex items-center gap-2 rounded-full px-2 py-1 font-medium",
-                        emailStatusStyle.bg,
-                        emailStatusStyle.text,
+                  <AccordionContent>
+                    <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                      <span><strong>Remetente:</strong> {email.from || "-"}</span>
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-2 rounded-full px-2 py-1 font-medium",
+                          emailStatusStyle.bg,
+                          emailStatusStyle.text,
+                        )}
+                      >
+                        <span className={cn("h-1.5 w-1.5 rounded-full", emailStatusStyle.dot)} />
+                        {email.identifiedStatusLabel || getRetirementRequestStatusLabel(email.identifiedStatus)}
+                      </span>
+                    </div>
+
+                    <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
+                      <p><strong>Nome extraído:</strong> {email.extractedName || "-"}</p>
+                      <p><strong>CPF extraído:</strong> {email.extractedCpf || "-"}</p>
+                    </div>
+
+                    <div className="mt-3 rounded-md border border-border bg-card p-3">
+                      <p className="text-xs font-medium text-foreground">Resumo</p>
+                      <p className="mt-1 text-sm text-muted-foreground">{emailSubject || "-"}</p>
+                    </div>
+
+                    <div className="mt-3 rounded-md border border-border bg-card p-3">
+                      <p className="text-xs font-medium text-foreground">Conteúdo completo</p>
+                      {renderedEmailHtml ? (
+                        <div
+                          className="mt-1 max-h-56 overflow-auto text-xs text-muted-foreground [&_a]:text-foreground [&_a]:underline"
+                          dangerouslySetInnerHTML={{ __html: renderedEmailHtml }}
+                        />
+                      ) : (
+                        <p className="mt-1 text-xs text-muted-foreground">-</p>
                       )}
-                    >
-                      <span className={cn("h-1.5 w-1.5 rounded-full", emailStatusStyle.dot)} />
-                      {email.identifiedStatusLabel || getRetirementRequestStatusLabel(email.identifiedStatus)}
-                    </span>
-                  </div>
-
-                  <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
-                    <p><strong>Nome extraído:</strong> {email.extractedName || "-"}</p>
-                    <p><strong>CPF extraído:</strong> {email.extractedCpf || "-"}</p>
-                  </div>
-
-                  <div className="mt-3 rounded-md border border-border bg-card p-3">
-                    <p className="text-xs font-medium text-foreground">Resumo</p>
-                    <p className="mt-1 text-sm text-muted-foreground">{email.summary || "-"}</p>
-                  </div>
-
-                  <div className="mt-3 rounded-md border border-border bg-card p-3">
-                    <p className="text-xs font-medium text-foreground">Conteúdo completo</p>
-                    <pre className="mt-1 max-h-56 overflow-auto whitespace-pre-wrap text-xs text-muted-foreground">
-                      {email.rawContent || "-"}
-                    </pre>
-                  </div>
-                </article>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
               );
             })}
-          </div>
+          </Accordion>
         )}
       </section>
     </div>

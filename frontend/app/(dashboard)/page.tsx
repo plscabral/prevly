@@ -19,6 +19,17 @@ import {
 import { NitStatus } from "@/lib/types";
 import { useQueryClient } from "@tanstack/react-query";
 
+const formatCpf = (value?: string | null) => {
+  if (!value) return "-";
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (!digits) return "-";
+
+  return digits
+    .replace(/^(\d{3})(\d)/, "$1.$2")
+    .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+    .replace(/\.(\d{3})(\d)/, ".$1-$2");
+};
+
 export default function DashboardPage() {
   const queryClient = useQueryClient();
   const [forceRefreshing, setForceRefreshing] = useState(false);
@@ -175,10 +186,17 @@ export default function DashboardPage() {
                   <div key={person.id} className="flex items-center justify-between border-b border-border py-2 last:border-0">
                     <div>
                       <p className="text-sm font-medium text-foreground">{person.name}</p>
-                      <p className="text-xs text-muted-foreground">{person.cpf}</p>
+                      <p className="text-xs text-muted-foreground">{formatCpf(person.cpf)}</p>
                     </div>
-                    <div className="text-right">
+                    <div className="flex items-center gap-3 text-right">
                       <p className="text-sm text-muted-foreground">{person.age ? `${person.age} anos` : "-"}</p>
+                      {person.id ? (
+                        <Button variant="ghost" size="sm" asChild className="h-8 w-8 p-0">
+                          <Link href={`/pessoas/${person.id}?from=dashboard`} aria-label={`Abrir detalhe de ${person.name ?? "pessoa"}`}>
+                            <ArrowRight className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                      ) : null}
                     </div>
                   </div>
                 ))}

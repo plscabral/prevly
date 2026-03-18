@@ -32,11 +32,17 @@ export default function PessoasPage() {
 
   const filteredPersons = useMemo(() => {
     const value = searchQuery.trim().toLowerCase();
+    const queryDigits = value.replace(/\D/g, "");
     if (!value) return persons;
     return persons.filter(
-      (person) =>
-        person.name?.toLowerCase().includes(value) ||
-        person.cpf?.toLowerCase().includes(value),
+      (person) => {
+        const personCpf = person.cpf ?? "";
+        const personCpfDigits = personCpf.replace(/\D/g, "");
+        const matchesName = person.name?.toLowerCase().includes(value);
+        const matchesCpfText = personCpf.toLowerCase().includes(value);
+        const matchesCpfDigits = queryDigits ? personCpfDigits.includes(queryDigits) : false;
+        return matchesName || matchesCpfText || matchesCpfDigits;
+      },
     );
   }, [persons, searchQuery]);
 

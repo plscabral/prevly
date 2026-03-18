@@ -8,12 +8,14 @@ import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
+  getPaginationRowModel,
   getSortedRowModel,
+  PaginationState,
   RowSelectionState,
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowUpDown, CalendarClock, Check, Copy, Eye, EyeOff, FileText } from "lucide-react";
+import { ArrowUpDown, CalendarClock, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -25,7 +27,6 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Person } from "@/lib/api/generated/model";
-import { toast } from "sonner";
 import {
   getRetirementRequestStatusLabel,
   getRetirementRequestStatusStyle,
@@ -44,51 +45,24 @@ function formatDistanceFromNowPtBr(value?: string | null) {
   return formatDistanceToNow(date, { addSuffix: true, locale: ptBR });
 }
 
-function PasswordCell({ password }: { password?: string | null }) {
-  const [isVisible, setIsVisible] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const safePassword = password ?? "";
-
-  if (!safePassword) return <span className="text-muted-foreground">-</span>;
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(safePassword);
-    setCopied(true);
-    toast.success("Senha copiada!");
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <div className="flex items-center gap-1.5">
-      <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
-        {isVisible ? safePassword : "••••••••"}
-      </code>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => setIsVisible(!isVisible)}
-        className="h-7 w-7 p-0"
-      >
-        {isVisible ? (
-          <EyeOff className="h-3.5 w-3.5 text-muted-foreground" />
-        ) : (
-          <Eye className="h-3.5 w-3.5 text-muted-foreground" />
-        )}
-      </Button>
-      <Button variant="ghost" size="sm" onClick={handleCopy} className="h-7 w-7 p-0">
-        {copied ? (
-          <Check className="h-3.5 w-3.5 text-emerald-600" />
-        ) : (
-          <Copy className="h-3.5 w-3.5 text-muted-foreground" />
-        )}
-      </Button>
-    </div>
-  );
-}
-
 export function PersonsTable({ data, onSelectionChange }: PersonsTableProps) {
+  const PAGE_SIZE = 25;
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: PAGE_SIZE,
+  });
+
+  const formatCpfDisplay = (value?: string | null) => {
+    if (!value) return "-";
+    const digits = value.replace(/\D/g, "").slice(0, 11);
+    if (!digits) return "-";
+    return digits
+      .replace(/^(\d{3})(\d)/, "$1.$2")
+      .replace(/^(\d{3})\.(\d{3})(\d)/, "$1.$2.$3")
+      .replace(/\.(\d{3})(\d)/, ".$1-$2");
+  };
 
   const columns: ColumnDef<Person>[] = [
     {
@@ -152,7 +126,7 @@ export function PersonsTable({ data, onSelectionChange }: PersonsTableProps) {
       accessorKey: "cpf",
       header: "CPF",
       cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">{row.original.cpf ?? "-"}</span>
+        <span className="text-sm text-muted-foreground">{formatCpfDisplay(row.original.cpf)}</span>
       ),
     },
     {
@@ -174,11 +148,6 @@ export function PersonsTable({ data, onSelectionChange }: PersonsTableProps) {
           </span>
         );
       },
-    },
-    {
-      accessorKey: "govPassword",
-      header: "Senha Gov.br",
-      cell: ({ row }) => <PasswordCell password={row.original.govPassword} />,
     },
     {
       id: "mainContact",
@@ -220,20 +189,23 @@ export function PersonsTable({ data, onSelectionChange }: PersonsTableProps) {
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
+    onPaginationChange: setPagination,
     onRowSelectionChange: setRowSelection,
     enableRowSelection: true,
-    state: { sorting, rowSelection },
+    state: { sorting, rowSelection, pagination },
   });
 
   useEffect(() => {
     if (!onSelectionChange) return;
-    const selected = Object.entries(rowSelection)
-      .filter(([, isSelected]) => isSelected)
-      .map(([rowId]) => data[Number(rowId)])
-      .filter((person): person is Person => Boolean(person));
+    const selected = table.getSelectedRowModel().rows.map((row) => row.original);
     onSelectionChange(selected);
-  }, [onSelectionChange, rowSelection, data]);
+  }, [onSelectionChange, table, rowSelection]);
+
+  useEffect(() => {
+    table.setPageIndex(0);
+  }, [data, table]);
 
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-card">
@@ -271,6 +243,29 @@ export function PersonsTable({ data, onSelectionChange }: PersonsTableProps) {
           )}
         </TableBody>
       </Table>
+      <div className="flex items-center justify-between border-t border-border px-4 py-3 text-sm text-muted-foreground">
+        <span>
+          Página {table.getState().pagination.pageIndex + 1} de {Math.max(1, table.getPageCount())}
+        </span>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+          >
+            Anterior
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
+            Próxima
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

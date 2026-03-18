@@ -7,7 +7,9 @@ import {
   ColumnDef,
   flexRender,
   getCoreRowModel,
+  getPaginationRowModel,
   getSortedRowModel,
+  PaginationState,
   RowSelectionState,
   SortingState,
   useReactTable,
@@ -19,7 +21,6 @@ import {
   CalendarDays,
   Link2,
   MoreHorizontal,
-  Timer,
   UserPlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -122,8 +123,13 @@ export function NitsTable({
   onBindPerson,
   onSelectionChange,
 }: NitsTableProps) {
+  const PAGE_SIZE = 25;
   const [sorting, setSorting] = useState<SortingState>([]);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: PAGE_SIZE,
+  });
 
   const columns: ColumnDef<Nit>[] = [
     {
@@ -293,23 +299,23 @@ export function NitsTable({
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
     onSortingChange: setSorting,
+    onPaginationChange: setPagination,
     onRowSelectionChange: setRowSelection,
     enableRowSelection: true,
-    state: { sorting, rowSelection },
+    state: { sorting, rowSelection, pagination },
   });
 
   useEffect(() => {
     if (!onSelectionChange) return;
-    const selected = Object.entries(rowSelection)
-      .filter(([, isSelected]) => isSelected)
-      .map(([rowId]) => data[Number(rowId)])
-      .filter(
-        (nit): nit is Nit =>
-          Boolean(nit),
-      );
+    const selected = table.getSelectedRowModel().rows.map((row) => row.original);
     onSelectionChange(selected);
-  }, [onSelectionChange, rowSelection, data]);
+  }, [onSelectionChange, table, rowSelection]);
+
+  useEffect(() => {
+    table.setPageIndex(0);
+  }, [data, table]);
 
   return (
     <div className="overflow-hidden rounded-lg border border-border bg-card">
@@ -356,6 +362,29 @@ export function NitsTable({
           )}
         </TableBody>
       </Table>
+      <div className="flex items-center justify-between border-t border-border px-4 py-3 text-sm text-muted-foreground">
+        <span>
+          Página {table.getState().pagination.pageIndex + 1} de {Math.max(1, table.getPageCount())}
+        </span>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+          >
+            Anterior
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
+            Próxima
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
