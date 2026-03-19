@@ -112,7 +112,7 @@ export default function PessoasPage() {
             Pessoas
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Gerencie os clientes cadastrados.
+            Gerencie as pessoas cadastradas.
           </p>
         </div>
         <div className="flex items-center gap-2">

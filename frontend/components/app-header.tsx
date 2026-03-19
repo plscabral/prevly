@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
 import { ThemeToggle } from './theme-toggle'
 import { Button } from './ui/button'
 import { authClient } from '@/lib/auth-client'
-import { CreditCard, LayoutDashboard, LogOut, Menu, Users } from 'lucide-react'
+import { IdCard, LayoutDashboard, LogOut, Menu, Users } from 'lucide-react'
 import {
   Sheet,
   SheetClose,
@@ -19,7 +19,7 @@ import {
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Pessoas', href: '/pessoas', icon: Users },
-  { name: 'NITs', href: '/nits', icon: CreditCard },
+  { name: 'NITs', href: '/nits', icon: IdCard },
 ]
 
 export function AppHeader() {

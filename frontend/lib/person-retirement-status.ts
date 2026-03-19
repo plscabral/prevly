@@ -2,12 +2,14 @@ export enum RetirementRequestStatus {
   PendingRequirement = 0,
   Approved = 1,
   Denied = 2,
+  UnderAnalysis = 3,
 }
 
 export const retirementRequestStatusLabels: Record<RetirementRequestStatus, string> = {
   [RetirementRequestStatus.PendingRequirement]: "Aguardando cumprimento de exigência",
-  [RetirementRequestStatus.Approved]: "Deferido",
+  [RetirementRequestStatus.Approved]: "Benefício aprovado",
   [RetirementRequestStatus.Denied]: "Indeferido",
+  [RetirementRequestStatus.UnderAnalysis]: "Em análise",
 };
 
 export const retirementRequestStatusStyles: Record<
@@ -29,11 +31,30 @@ export const retirementRequestStatusStyles: Record<
     text: "text-rose-700",
     dot: "bg-rose-500",
   },
+  [RetirementRequestStatus.UnderAnalysis]: {
+    bg: "bg-sky-50",
+    text: "text-sky-700",
+    dot: "bg-sky-500",
+  },
 };
 
 export function getRetirementRequestStatusLabel(status?: number | null): string {
   if (status === null || status === undefined) return "Sem status";
   return retirementRequestStatusLabels[status as RetirementRequestStatus] ?? "Sem status";
+}
+
+export function getRetirementRequestStatusLabelFromApi(
+  status?: number | null,
+  apiLabel?: string | null,
+): string {
+  const normalizedApiLabel = apiLabel?.trim();
+  if (!normalizedApiLabel) return getRetirementRequestStatusLabel(status);
+
+  if (normalizedApiLabel.toLowerCase() === "deferido") {
+    return "Benefício aprovado";
+  }
+
+  return normalizedApiLabel;
 }
 
 export function getRetirementRequestStatusStyle(status?: number | null) {
