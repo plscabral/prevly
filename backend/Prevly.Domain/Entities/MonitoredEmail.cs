@@ -24,6 +24,7 @@ public class MonitoredEmail : IEntity
 
     public string? ExtractedName { get; set; }
     public string? ExtractedCpf { get; set; }
+    public string? ExtractedBenefitNumber { get; set; }
     public string? MessageUniqueId { get; set; }
     public string? ContentHash { get; set; }
     public DateTime CreatedAt { get; set; }

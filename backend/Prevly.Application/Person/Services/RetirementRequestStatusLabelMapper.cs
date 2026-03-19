@@ -9,6 +9,7 @@ public static class RetirementRequestStatusLabelMapper
         RetirementRequestStatus.PendingRequirement => "Aguardando cumprimento de exigência",
         RetirementRequestStatus.Approved => "Deferido",
         RetirementRequestStatus.Denied => "Indeferido",
+        RetirementRequestStatus.UnderAnalysis => "Em análise",
         _ => "Sem status"
     };
 }

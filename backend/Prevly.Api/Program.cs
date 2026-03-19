@@ -1,8 +1,12 @@
 using System.Text;
+using Amazon;
+using Amazon.Runtime;
+using Amazon.S3;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
+using Prevly.Api.Documents;
 using Prevly.Api.Nit.Flows;
 using Prevly.Api.Nit.Services;
 using Prevly.Application.Person.Interfaces;
@@ -22,6 +26,14 @@ const string FrontendCorsPolicy = "FrontendCorsPolicy";
 
 builder.Services.Configure<MongoDbSettings>(builder.Configuration.GetSection(nameof(MongoDbSettings)));
 builder.Services.AddSingleton<MongoDbSettings>(sp => sp.GetRequiredService<IOptions<MongoDbSettings>>().Value);
+builder.Services
+    .AddOptions<DocumentStorageOptions>()
+    .Bind(builder.Configuration.GetSection(DocumentStorageOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+builder.Services.AddSingleton<DocumentStorageOptions>(sp =>
+    sp.GetRequiredService<IOptions<DocumentStorageOptions>>().Value
+);
 
 // mongodb
 builder.Services.AddSingleton<IMongoClient>(sp =>
@@ -84,6 +96,20 @@ builder.Services.AddScoped<INitService, NitService>();
 builder.Services.AddScoped<IPdfImportFileExtractor, PdfImportFileExtractor>();
 builder.Services.AddScoped<NitCheckFlow>();
 builder.Services.AddScoped<NitDetailFlow>();
+builder.Services.AddSingleton<IAmazonS3>(sp =>
+{
+    var settings = sp.GetRequiredService<DocumentStorageOptions>();
+    var config = new AmazonS3Config
+    {
+        ServiceURL = settings.Endpoint,
+        ForcePathStyle = settings.ForcePathStyle,
+        AuthenticationRegion = RegionEndpoint.USEast1.SystemName
+    };
+
+    var credentials = new BasicAWSCredentials(settings.AccessKey, settings.SecretKey);
+    return new AmazonS3Client(credentials, config);
+});
+builder.Services.AddScoped<IDocumentStorage, R2DocumentStorage>();
 
 
 // repositories

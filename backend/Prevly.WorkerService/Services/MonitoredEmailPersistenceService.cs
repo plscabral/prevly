@@ -46,6 +46,7 @@ public sealed class MonitoredEmailPersistenceService(
             IdentifiedStatus = parsedData.Status,
             ExtractedName = parsedData.ExtractedName,
             ExtractedCpf = parsedData.ExtractedCpf,
+            ExtractedBenefitNumber = parsedData.ExtractedBenefitNumber,
             MessageUniqueId = BuildMessageUniqueId(message),
             ContentHash = ComputeContentHash(message),
             CreatedAt = DateTime.UtcNow

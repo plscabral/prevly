@@ -53,6 +53,7 @@ public sealed class LoggingEmailMessageProcessor(
                 person,
                 parsedData.Status.Value,
                 message.ReceivedAt,
+                parsedData.ExtractedBenefitNumber,
                 cancellationToken
             );
         }

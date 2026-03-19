@@ -18,10 +18,14 @@ public class Person : IEntity
     public string? GovPassword { get; set; }
     public string? NitId { get; set; }
     public DateTime? BirthDate { get; set; }
+    public PersonRetirementAgreement? RetirementAgreement { get; set; }
+    public List<PersonFinancialEntry> FinancialEntries { get; set; } = [];
+    public List<PersonDocument> Documents { get; set; } = [];
 
     [BsonRepresentation(BsonType.String)]
     public RetirementRequestStatus? RetirementRequestStatus { get; set; }
     public DateTime? RetirementRequestStatusUpdatedAt { get; set; }
+    public string? RetirementBenefitNumber { get; set; }
 
     public DateTime CreatedAt { get; set; }
 }

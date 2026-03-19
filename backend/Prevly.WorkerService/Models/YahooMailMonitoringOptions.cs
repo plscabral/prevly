@@ -34,7 +34,7 @@ public sealed class YahooMailMonitoringOptions
     [Range(1, 60)]
     public int RetryBaseDelaySeconds { get; set; } = 5;
 
-    [Range(1, 90)]
+    [Range(1, 366)]
     public int LookbackDays { get; set; } = 15;
 
     [Range(1, 500)]

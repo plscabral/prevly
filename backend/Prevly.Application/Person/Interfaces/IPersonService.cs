@@ -11,5 +11,11 @@ public interface IPersonService
     Task<Domain.Entities.Person?> GetByIdAsync(string id);
     Task<Domain.Entities.Person> CreateAsync(CreatePersonDto dto);
     Task<Domain.Entities.Person?> UpdateAsync(string id, UpdatePersonDto dto);
+    Task<Domain.Entities.Person?> UpdateRetirementAgreementAsync(string id, UpsertPersonRetirementAgreementDto dto);
+    Task<Domain.Entities.PersonFinancialEntry?> AddFinancialEntryAsync(string id, AddPersonFinancialEntryDto dto);
+    Task<bool> DeleteFinancialEntryAsync(string id, string entryId);
+    Task<Domain.Entities.PersonDocument?> AddDocumentAsync(string id, AddPersonDocumentDto dto);
+    Task<Domain.Entities.PersonDocument?> GetDocumentAsync(string id, string documentId);
+    Task<bool> DeleteDocumentAsync(string id, string documentId);
     Task<bool> DeleteAsync(string id);
 }

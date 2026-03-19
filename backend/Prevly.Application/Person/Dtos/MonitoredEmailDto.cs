@@ -13,6 +13,7 @@ public sealed class MonitoredEmailDto
     public string? IdentifiedStatusLabel { get; init; }
     public string? ExtractedName { get; init; }
     public string? ExtractedCpf { get; init; }
+    public string? ExtractedBenefitNumber { get; init; }
     public string? MessageUniqueId { get; init; }
     public DateTime CreatedAt { get; init; }
 }
