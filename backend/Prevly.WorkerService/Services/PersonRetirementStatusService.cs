@@ -19,14 +19,17 @@ public sealed class PersonRetirementStatusService(
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var shouldUpdate = person.RetirementRequestStatusUpdatedAt is null ||
-                           messageReceivedAt.UtcDateTime >= person.RetirementRequestStatusUpdatedAt.Value;
+        var lastTrackedUpdateAt = person.RetirementRequestStatusLastEmailUpdatedAt
+                                  ?? person.RetirementRequestStatusUpdatedAt;
+        var shouldUpdate = lastTrackedUpdateAt is null ||
+                           messageReceivedAt.UtcDateTime >= lastTrackedUpdateAt.Value;
 
         if (!shouldUpdate)
             return;
 
         person.RetirementRequestStatus = status;
         person.RetirementRequestStatusUpdatedAt = messageReceivedAt.UtcDateTime;
+        person.RetirementRequestStatusLastEmailUpdatedAt = messageReceivedAt.UtcDateTime;
 
         if (status == RetirementRequestStatus.Approved && !string.IsNullOrWhiteSpace(benefitNumber))
         {

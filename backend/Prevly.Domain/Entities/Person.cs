@@ -25,6 +25,7 @@ public class Person : IEntity
     [BsonRepresentation(BsonType.String)]
     public RetirementRequestStatus? RetirementRequestStatus { get; set; }
     public DateTime? RetirementRequestStatusUpdatedAt { get; set; }
+    public DateTime? RetirementRequestStatusLastEmailUpdatedAt { get; set; }
     public string? RetirementBenefitNumber { get; set; }
 
     public DateTime CreatedAt { get; set; }

@@ -6,9 +6,9 @@ public static class RetirementRequestStatusLabelMapper
 {
     public static string ToPtBrLabel(RetirementRequestStatus? status) => status switch
     {
-        RetirementRequestStatus.PendingRequirement => "Aguardando cumprimento de exigência",
+        RetirementRequestStatus.PendingRequirement => "Aguardando exigência(s)",
         RetirementRequestStatus.Approved => "Deferido",
-        RetirementRequestStatus.Denied => "Indeferido",
+        RetirementRequestStatus.Denied => "Benefício negado",
         RetirementRequestStatus.UnderAnalysis => "Em análise",
         _ => "Sem status"
     };

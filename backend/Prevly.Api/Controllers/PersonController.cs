@@ -484,7 +484,16 @@ public class PersonController(
             using var workbook = new XLWorkbook();
             var worksheet = workbook.Worksheets.Add("Pessoas");
 
-            var headers = new[] { "Nome", "CPF", "Status do pedido", "WhatsApp", "NIT Vinculado", "Criado em" };
+            var headers = new[]
+            {
+                "Nome",
+                "CPF",
+                "WhatsApp",
+                "Último status",
+                "Última atualização do status",
+                "NIT Vinculado",
+                "Criado em"
+            };
             for (var col = 0; col < headers.Length; col++)
             {
                 worksheet.Cell(1, col + 1).Value = headers[col];
@@ -495,10 +504,13 @@ public class PersonController(
             {
                 worksheet.Cell(rowIndex, 1).Value = ValueOrDash(person.Name);
                 worksheet.Cell(rowIndex, 2).Value = ValueOrDash(person.Cpf);
-                worksheet.Cell(rowIndex, 3).Value = RetirementRequestStatusLabelMapper.ToPtBrLabel(person.RetirementRequestStatus);
-                worksheet.Cell(rowIndex, 4).Value = ValueOrDash(person.WhatsApp);
-                worksheet.Cell(rowIndex, 5).Value = ValueOrDash(person.NitId);
-                worksheet.Cell(rowIndex, 6).Value = person.CreatedAt == default
+                worksheet.Cell(rowIndex, 3).Value = ValueOrDash(person.WhatsApp);
+                worksheet.Cell(rowIndex, 4).Value = RetirementRequestStatusLabelMapper.ToPtBrLabel(person.RetirementRequestStatus);
+                worksheet.Cell(rowIndex, 5).Value = person.RetirementRequestStatusLastEmailUpdatedAt is null
+                    ? "-"
+                    : person.RetirementRequestStatusLastEmailUpdatedAt.Value.ToString("dd/MM/yyyy HH:mm");
+                worksheet.Cell(rowIndex, 6).Value = ValueOrDash(person.NitId);
+                worksheet.Cell(rowIndex, 7).Value = person.CreatedAt == default
                     ? "-"
                     : person.CreatedAt.ToString("dd/MM/yyyy HH:mm");
                 rowIndex++;
@@ -521,10 +533,11 @@ public class PersonController(
             worksheet.Columns().AdjustToContents();
             worksheet.Column(1).Width = Math.Max(worksheet.Column(1).Width, 28);
             worksheet.Column(2).Width = Math.Max(worksheet.Column(2).Width, 18);
-            worksheet.Column(3).Width = Math.Max(worksheet.Column(3).Width, 34);
-            worksheet.Column(4).Width = Math.Max(worksheet.Column(4).Width, 18);
-            worksheet.Column(5).Width = Math.Max(worksheet.Column(5).Width, 20);
-            worksheet.Column(6).Width = Math.Max(worksheet.Column(6).Width, 18);
+            worksheet.Column(3).Width = Math.Max(worksheet.Column(3).Width, 18);
+            worksheet.Column(4).Width = Math.Max(worksheet.Column(4).Width, 30);
+            worksheet.Column(5).Width = Math.Max(worksheet.Column(5).Width, 24);
+            worksheet.Column(6).Width = Math.Max(worksheet.Column(6).Width, 20);
+            worksheet.Column(7).Width = Math.Max(worksheet.Column(7).Width, 18);
 
             using var stream = new MemoryStream();
             workbook.SaveAs(stream);

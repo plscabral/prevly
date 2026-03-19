@@ -6,9 +6,9 @@ export enum RetirementRequestStatus {
 }
 
 export const retirementRequestStatusLabels: Record<RetirementRequestStatus, string> = {
-  [RetirementRequestStatus.PendingRequirement]: "Aguardando cumprimento de exigência",
+  [RetirementRequestStatus.PendingRequirement]: "Aguardando exigência(s)",
   [RetirementRequestStatus.Approved]: "Benefício aprovado",
-  [RetirementRequestStatus.Denied]: "Indeferido",
+  [RetirementRequestStatus.Denied]: "Benefício negado",
   [RetirementRequestStatus.UnderAnalysis]: "Em análise",
 };
 
@@ -50,8 +50,21 @@ export function getRetirementRequestStatusLabelFromApi(
   const normalizedApiLabel = apiLabel?.trim();
   if (!normalizedApiLabel) return getRetirementRequestStatusLabel(status);
 
-  if (normalizedApiLabel.toLowerCase() === "deferido") {
+  const loweredApiLabel = normalizedApiLabel.toLowerCase();
+
+  if (loweredApiLabel === "deferido") {
     return "Benefício aprovado";
+  }
+
+  if (loweredApiLabel === "indeferido") {
+    return "Benefício negado";
+  }
+
+  if (
+    loweredApiLabel === "aguardando cumprimento de exigência" ||
+    loweredApiLabel === "aguardando cumprimento de exigencia"
+  ) {
+    return "Aguardando exigência(s)";
   }
 
   return normalizedApiLabel;

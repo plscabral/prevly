@@ -5,6 +5,7 @@ using Amazon.S3;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using Prevly.Api.Documents;
 using Prevly.Api.Nit.Flows;
@@ -124,6 +125,7 @@ builder.Services.AddScoped<INitOwnershipChecker, NitOwnershipChecker>();
 var app = builder.Build();
 
 await SeedDefaultAdminAsync(app.Services);
+await NormalizeLegacyRetirementStatusDataAsync(app.Services);
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -170,5 +172,94 @@ static async Task SeedDefaultAdminAsync(IServiceProvider services)
     catch (Exception ex)
     {
         logger.LogWarning(ex, "Nao foi possivel garantir a conta padrao admin/admin.");
+    }
+}
+
+static async Task NormalizeLegacyRetirementStatusDataAsync(IServiceProvider services)
+{
+    await using var scope = services.CreateAsyncScope();
+    var logger = scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("NormalizeLegacyRetirementStatusData");
+    var database = scope.ServiceProvider.GetRequiredService<IMongoDatabase>();
+
+    try
+    {
+        var personsCollection = database.GetCollection<BsonDocument>(nameof(Person));
+        var monitoredEmailsCollection = database.GetCollection<BsonDocument>(nameof(MonitoredEmail));
+
+        var statusMappings = new Dictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["Aguardando cumprimento de exigência"] = nameof(RetirementRequestStatus.PendingRequirement),
+            ["Aguardando cumprimento de exigencia"] = nameof(RetirementRequestStatus.PendingRequirement),
+            ["Aguardando exigência(s)"] = nameof(RetirementRequestStatus.PendingRequirement),
+            ["Aguardando exigencia(s)"] = nameof(RetirementRequestStatus.PendingRequirement),
+            ["Indeferido"] = nameof(RetirementRequestStatus.Denied),
+            ["Benefício negado"] = nameof(RetirementRequestStatus.Denied),
+            ["Beneficio negado"] = nameof(RetirementRequestStatus.Denied),
+            ["Deferido"] = nameof(RetirementRequestStatus.Approved),
+            ["Benefício aprovado"] = nameof(RetirementRequestStatus.Approved),
+            ["Beneficio aprovado"] = nameof(RetirementRequestStatus.Approved),
+            ["Em análise"] = nameof(RetirementRequestStatus.UnderAnalysis),
+            ["Em analise"] = nameof(RetirementRequestStatus.UnderAnalysis)
+        };
+
+        var normalizedPersons = 0L;
+        var normalizedMonitoredEmails = 0L;
+
+        foreach (var (legacyValue, enumValue) in statusMappings)
+        {
+            var personFilter = Builders<BsonDocument>.Filter.Eq("RetirementRequestStatus", legacyValue);
+            var personUpdate = Builders<BsonDocument>.Update.Set("RetirementRequestStatus", enumValue);
+            var personResult = await personsCollection.UpdateManyAsync(personFilter, personUpdate);
+            normalizedPersons += personResult.ModifiedCount;
+
+            var monitoredEmailFilter = Builders<BsonDocument>.Filter.Eq("IdentifiedStatus", legacyValue);
+            var monitoredEmailUpdate = Builders<BsonDocument>.Update.Set("IdentifiedStatus", enumValue);
+            var monitoredEmailResult = await monitoredEmailsCollection.UpdateManyAsync(monitoredEmailFilter, monitoredEmailUpdate);
+            normalizedMonitoredEmails += monitoredEmailResult.ModifiedCount;
+        }
+
+        var copyDateFilter = Builders<BsonDocument>.Filter.And(
+            Builders<BsonDocument>.Filter.Exists("RetirementRequestStatusUpdatedAt", true),
+            Builders<BsonDocument>.Filter.Ne("RetirementRequestStatusUpdatedAt", BsonNull.Value),
+            Builders<BsonDocument>.Filter.Or(
+                Builders<BsonDocument>.Filter.Exists("RetirementRequestStatusLastEmailUpdatedAt", false),
+                Builders<BsonDocument>.Filter.Eq("RetirementRequestStatusLastEmailUpdatedAt", BsonNull.Value)
+            )
+        );
+        var documentsToBackfill = await personsCollection
+            .Find(copyDateFilter)
+            .Project(Builders<BsonDocument>.Projection
+                .Include("_id")
+                .Include("RetirementRequestStatusUpdatedAt"))
+            .ToListAsync();
+
+        var copiedDatesCount = 0L;
+        foreach (var document in documentsToBackfill)
+        {
+            if (!document.TryGetValue("_id", out var idValue) ||
+                !document.TryGetValue("RetirementRequestStatusUpdatedAt", out var dateValue))
+            {
+                continue;
+            }
+
+            var updateFilter = Builders<BsonDocument>.Filter.Eq("_id", idValue);
+            var update = Builders<BsonDocument>.Update.Set("RetirementRequestStatusLastEmailUpdatedAt", dateValue);
+            var result = await personsCollection.UpdateOneAsync(updateFilter, update);
+            copiedDatesCount += result.ModifiedCount;
+        }
+
+        if (normalizedPersons > 0 || normalizedMonitoredEmails > 0 || copiedDatesCount > 0)
+        {
+            logger.LogInformation(
+                "Normalizacao de status aplicada. PersonsStatus={PersonsStatus} MonitoredEmailsStatus={MonitoredEmailsStatus} PersonsLastEmailDate={PersonsLastEmailDate}",
+                normalizedPersons,
+                normalizedMonitoredEmails,
+                copiedDatesCount
+            );
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogWarning(ex, "Nao foi possivel normalizar dados legados de status.");
     }
 }

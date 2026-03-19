@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { format } from "date-fns";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -15,7 +16,15 @@ import {
   SortingState,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowUpDown, CalendarClock, FileText } from "lucide-react";
+import {
+  ArrowUpDown,
+  CalendarClock,
+  CheckCircle2,
+  FileText,
+  SearchCheck,
+  TriangleAlert,
+  XCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -28,6 +37,7 @@ import {
 } from "@/components/ui/table";
 import { Person } from "@/lib/api/generated/model";
 import {
+  RetirementRequestStatus,
   getRetirementRequestStatusLabel,
   getRetirementRequestStatusStyle,
 } from "@/lib/person-retirement-status";
@@ -43,6 +53,28 @@ function formatDistanceFromNowPtBr(value?: string | null) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
   return formatDistanceToNow(date, { addSuffix: true, locale: ptBR });
+}
+
+function formatDateTimePtBr(value?: string | null) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return format(date, "dd/MM/yyyy HH:mm");
+}
+
+function getRetirementStatusIcon(status?: number | null) {
+  switch (status) {
+    case RetirementRequestStatus.PendingRequirement:
+      return TriangleAlert;
+    case RetirementRequestStatus.Approved:
+      return CheckCircle2;
+    case RetirementRequestStatus.Denied:
+      return XCircle;
+    case RetirementRequestStatus.UnderAnalysis:
+      return SearchCheck;
+    default:
+      return TriangleAlert;
+  }
 }
 
 export function PersonsTable({ data, onSelectionChange }: PersonsTableProps) {
@@ -74,7 +106,9 @@ export function PersonsTable({ data, onSelectionChange }: PersonsTableProps) {
               table.getIsAllPageRowsSelected() ||
               (table.getIsSomePageRowsSelected() && "indeterminate")
             }
-            onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+            onCheckedChange={(value) =>
+              table.toggleAllPageRowsSelected(!!value)
+            }
             aria-label="Selecionar todos"
           />
         </div>
@@ -120,31 +154,48 @@ export function PersonsTable({ data, onSelectionChange }: PersonsTableProps) {
           <ArrowUpDown className="ml-1.5 size-3" />
         </Button>
       ),
-      cell: ({ row }) => <span className="font-medium">{row.original.name ?? "-"}</span>,
+      cell: ({ row }) => (
+        <span className="font-medium">{row.original.name ?? "-"}</span>
+      ),
     },
     {
       accessorKey: "cpf",
       header: "CPF",
       cell: ({ row }) => (
-        <span className="text-sm text-muted-foreground">{formatCpfDisplay(row.original.cpf)}</span>
+        <span className="text-sm text-muted-foreground">
+          {formatCpfDisplay(row.original.cpf)}
+        </span>
       ),
     },
+
     {
       id: "retirementRequestStatus",
-      header: "Status monitorado",
+      header: "Último status",
       cell: ({ row }) => {
         const status = row.original.retirementRequestStatus;
         const style = getRetirementRequestStatusStyle(status);
+        const StatusIcon = getRetirementStatusIcon(status);
+        const updatedAt = formatDateTimePtBr(
+          row.original.retirementRequestStatusLastEmailUpdatedAt,
+        );
         return (
           <span
             className={cn(
-              "inline-flex items-center gap-2 rounded-full px-2 py-1 text-xs font-medium",
+              "inline-flex flex-col items-start gap-1 rounded-xl px-2 py-1.5",
               style.bg,
               style.text,
             )}
           >
-            <span className={cn("h-1.5 w-1.5 rounded-full", style.dot)} />
-            {getRetirementRequestStatusLabel(status)}
+            <span className="inline-flex items-center gap-2 text-[11px] opacity-80">
+              <StatusIcon
+                className={cn("ml-0.5 h-3.5 w-3.5 shrink-0", style.text)}
+              />
+              {getRetirementRequestStatusLabel(status)}
+            </span>
+            <span className="inline-flex items-center gap-1 text-[11px] opacity-80">
+              <CalendarClock className="ml-0.5 h-3.5 w-3.5 shrink-0" />
+              {updatedAt === "-" ? "Sem atualização" : updatedAt}
+            </span>
           </span>
         );
       },
@@ -162,17 +213,18 @@ export function PersonsTable({ data, onSelectionChange }: PersonsTableProps) {
       id: "nitNumber",
       header: "NIT Vinculado",
       cell: ({ row }) => (
-        <span className="text-sm">
-          {row.original.nitId || "-"}
-        </span>
+        <span className="text-sm">{row.original.nitId || "-"}</span>
       ),
     },
     {
       accessorKey: "createdAt",
       header: "Criado em",
       cell: ({ row }) => {
-        const createdAtDistance = formatDistanceFromNowPtBr(row.original.createdAt);
-        if (!createdAtDistance) return <span className="text-sm text-muted-foreground">-</span>;
+        const createdAtDistance = formatDistanceFromNowPtBr(
+          row.original.createdAt,
+        );
+        if (!createdAtDistance)
+          return <span className="text-sm text-muted-foreground">-</span>;
 
         return (
           <p className="flex items-center text-xs text-muted-foreground">
@@ -199,7 +251,9 @@ export function PersonsTable({ data, onSelectionChange }: PersonsTableProps) {
 
   useEffect(() => {
     if (!onSelectionChange) return;
-    const selected = table.getSelectedRowModel().rows.map((row) => row.original);
+    const selected = table
+      .getSelectedRowModel()
+      .rows.map((row) => row.original);
     onSelectionChange(selected);
   }, [onSelectionChange, table, rowSelection]);
 
@@ -214,10 +268,16 @@ export function PersonsTable({ data, onSelectionChange }: PersonsTableProps) {
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id} className="hover:bg-transparent">
               {headerGroup.headers.map((header) => (
-                <TableHead key={header.id} className="h-11 text-xs font-medium text-muted-foreground">
+                <TableHead
+                  key={header.id}
+                  className="h-11 text-xs font-medium text-muted-foreground"
+                >
                   {header.isPlaceholder
                     ? null
-                    : flexRender(header.column.columnDef.header, header.getContext())}
+                    : flexRender(
+                        header.column.columnDef.header,
+                        header.getContext(),
+                      )}
                 </TableHead>
               ))}
             </TableRow>
@@ -236,7 +296,10 @@ export function PersonsTable({ data, onSelectionChange }: PersonsTableProps) {
             ))
           ) : (
             <TableRow>
-              <TableCell colSpan={columns.length} className="h-32 text-center text-muted-foreground">
+              <TableCell
+                colSpan={columns.length}
+                className="h-32 text-center text-muted-foreground"
+              >
                 Nenhuma pessoa encontrada.
               </TableCell>
             </TableRow>
@@ -245,7 +308,8 @@ export function PersonsTable({ data, onSelectionChange }: PersonsTableProps) {
       </Table>
       <div className="flex items-center justify-between border-t border-border px-4 py-3 text-sm text-muted-foreground">
         <span>
-          Página {table.getState().pagination.pageIndex + 1} de {Math.max(1, table.getPageCount())}
+          Página {table.getState().pagination.pageIndex + 1} de{" "}
+          {Math.max(1, table.getPageCount())}
         </span>
         <div className="flex items-center gap-2">
           <Button

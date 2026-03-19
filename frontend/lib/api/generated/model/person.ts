@@ -28,5 +28,7 @@ export interface Person {
   retirementRequestStatus?: number | null;
   /** @nullable */
   retirementRequestStatusUpdatedAt?: string | null;
+  /** @nullable */
+  retirementRequestStatusLastEmailUpdatedAt?: string | null;
   createdAt?: string;
 }
